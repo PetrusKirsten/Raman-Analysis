@@ -8,8 +8,9 @@ from matplotlib.ticker import MultipleLocator
 def spectrum(
         filetitle,
         filepath,
-        mean,
-        peak,
+        lineColor,
+        plot_mean,
+        plot_peaks,
         save
 ):
 
@@ -41,32 +42,46 @@ def spectrum(
 
         return pipeline.apply(spec)
 
+    peaks_found, peaks_prop = None, None
+
     configFigure()
     raw_spectrum = readData(filepath)
     processed_spectrum = preprocess(raw_spectrum)
 
-    if mean:
+    if plot_mean:
         rs.plot.mean_spectra(
             processed_spectrum,
             title=filetitle,
-            color='darkorange',
+            color=lineColor,
             lw=.85)
-
     else:
         rs.plot.spectra(
             processed_spectrum,
             title=filetitle,
             plot_type='single stacked',
             label=['Region 1', 'Region 2', 'Region 3'],
-            color='darkorange',
+            color=lineColor,
             lw=.85)
 
-    if peak:
-        _ = rs.plot.peaks(
+    if plot_peaks:
+        _, peaks_found, peaks_prop = rs.plot.peaks(
             processed_spectrum[0],
             prominence=0.01,
-            color='darkorange',
-            lw=.5)
+            color=lineColor,
+            lw=.5,
+            return_peaks=True)
+        print(
+            peaks_found,
+            '\n\n',
+            peaks_prop)
+
+    # rs.plot.peak_dist(
+    #     [processed_spectrum],
+    #     478,
+    #     title=filetitle + ' peaks distribution',
+    #     # labels=['Region 1', 'Region 2', 'Region 3'],
+    #     # labels=['Region 1'],
+    #     color=lineColor)
 
     plt.xlim([0, 1800])
     # plt.subplots_adjust(
@@ -79,15 +94,24 @@ def spectrum(
     if save:
         plt.savefig(f'{filetitle}' + '.png', facecolor='w', dpi=300)
 
+    if plot_peaks:
+        return processed_spectrum, peaks_found, peaks_prop
+    else:
+        return processed_spectrum
+
 
 if __name__ == '__main__':
 
-    spectrum(
-        'Wheat starch powder - Stacked',
+    starch_powder = spectrum(
+        'Wheat starch powder',
         [
             "data/WSt Powder 10x Region 1.txt",
             "data/WSt Powder 10x Region 2.txt",
             "data/WSt Powder 10x Region 3.txt",
         ],
-        False, True, False,
+        'darkorange',
+        False, False, False,
     )
+
+
+
