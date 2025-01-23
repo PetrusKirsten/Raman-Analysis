@@ -1,133 +1,190 @@
-import numpy as np
 import pandas as pd
 import ramanspy as rs
+from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
+from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
 
 
-def spectrum(
-        filetitle,
-        filepath,
+def raman(
+        fileTitle,
+        filePath,
         legend,
-        lineColor,
+        lineColors,
+        peakBands,
         plot_mean,
         plot_peaks,
         save
 ):
 
     def configFigure():
+
         plt.style.use('seaborn-v0_8-ticks')
-        plt.figure(figsize=(16, 6), facecolor='whitesmoke')
+        plt.figure(figsize=(16, 9), facecolor='snow').canvas.manager.set_window_title(fileTitle + ' - Raman spectra')
         plt.gca().spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
         plt.gca().xaxis.set_major_locator(MultipleLocator(100))
         plt.gca().xaxis.set_minor_locator(MultipleLocator(25))
 
-    def readData(filenames):
-        spectrum_list = []
-
-        for file in filenames:  # TODO: update function to read and store lists of spectra
-            data = pd.read_csv(file)
-            xData, yData = data['X-Axis'], data[data.keys()[-1]]
-            spectrum_list.append(rs.Spectrum(yData, xData))
-
-        return spectrum_list
-
     def readDatas(directory_lists):
-        all_raman_spectra = []
+
+        raw = []
+
         for directory_list in directory_lists:
-            raman_spectra = []  # Lista para armazenar os espectros de uma sub-lista de diretórios
+
+            spectra = []
             for filename in directory_list:
+
                 try:
-                    # Lê os dados do arquivo CSV
                     data = pd.read_csv(filename)
 
-                    # Obtém os dados espectrais
-                    spectral_data = data['X-Axis']
-                    spectral_axis = data[data.keys()[-1]]
+                    xData, yData = data['X-Axis'], data[data.keys()[-1]]
+                    raman_spectrum = rs.Spectrum(yData, xData)
+                    spectra.append(raman_spectrum)
 
-                    # Cria o espectro Raman
-                    raman_spectrum = rs.Spectrum(spectral_data, spectral_axis)
-
-                    # Adiciona o espectro à lista
-                    raman_spectra.append(raman_spectrum)
                 except Exception as e:
-                    print(f"Erro ao processar o arquivo {filename}: {e}")
-                    raman_spectra.append(None)  # Adiciona None para manter o alinhamento
+                    print(f"Error processing the file {filename}: {e}")
+                    spectra.append(None)
 
-            all_raman_spectra.append(raman_spectra)  # Adiciona a lista processada ao resultado final
+            raw.append(spectra)
 
-        return all_raman_spectra
+        return raw
 
-    def preprocess(spec):
-        pipeline = rs.preprocessing.Pipeline([
-            rs.preprocessing.misc.Cropper(region=(200, 1800)),
-            rs.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
-            rs.preprocessing.denoise.SavGol(window_length=7, polyorder=3),
-            rs.preprocessing.baseline.ASPLS(),
-            rs.preprocessing.normalise.MinMax(pixelwise=True),
-        ])
+    def preprocess(spectra_lists):
 
-        return pipeline.apply(spec)
+        def pipeline(spec):
 
-    peaks_found, peaks_prop = None, None
+            routine = rs.preprocessing.Pipeline([
+                rs.preprocessing.misc.Cropper(region=(200, 1800)),
+                rs.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
+                rs.preprocessing.denoise.SavGol(window_length=7, polyorder=3),
+                rs.preprocessing.baseline.ASPLS(),
+                rs.preprocessing.normalise.MinMax(pixelwise=True),
+            ])
 
+            return routine.apply(spec)
+
+        processed = []
+
+        for spectra_list in spectra_lists:
+            processed_sublist = []
+
+            for spectrum in spectra_list:
+
+                try:
+                    processed_spectrum = pipeline(spectrum)
+                    processed_sublist.append(processed_spectrum)
+
+                except Exception as e:
+                    print(f"Error processin the spectrum {spectrum}: {e}")
+                    processed_sublist.append(None)
+
+            processed.append(processed_sublist)
+
+        return processed
+
+    def drawPeaks(bands):
+
+        for band in bands:
+
+            axSpec.axvline(
+                band,
+                label='test',
+                color='whitesmoke',
+                lw=10,
+                ls='-',
+                alpha=.9,
+                zorder=-2)
+
+            axSpec.axvline(
+                band,
+                color='dimgray',
+                lw=.75,
+                ls=':',
+                alpha=.8,
+                zorder=-1)
+
+    def plotPeakDist(spectra, bands):
+        for band in bands:
+            fig = plt.figure(figsize=(8, 7), facecolor='snow')
+            fig.canvas.manager.set_window_title(fileTitle + f' - peaks distribution at {band}')
+            gs = GridSpec(1, 1, width_ratios=[1], height_ratios=[1])
+            axPeak = fig.add_subplot(gs[0, 0])
+            axPeak.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+
+            rs.plot.peak_dist(
+                spectra, band,
+                ax=axPeak,
+                title=fileTitle + f' peaks distribution at {band} cm$^{{{-1}}}$',
+                labels=legend,
+                color=lineColors,
+                alpha=.8,
+                edgecolor='#383838',
+                linewidth=.85,
+                ecolor='#252525',
+            )
+
+            plt.tight_layout()
+
+    # create some vars
+    peaks_found, peaks_prop, axSpec = None, None, None
     if legend is None:
-        legend = [f'Region {i + 1}' for i in range(len(filepath))]
+        legend = [f'Region {i + 1}' for i in range(len(filePath))]
 
     configFigure()
-    raw_spectrum = readDatas(filepath)
-    processed_spectrum = preprocess(spec for spec in raw_spectrum)  # TODO: fix processing
+
+    # read & preprocess data
+    raw_spectra = readDatas(filePath)
+    processed_spectra = preprocess(raw_spectra)
+
+    # TODO: try to auto the peak finder to directly pass to drawPeaks()
 
     if plot_mean:
-        rs.plot.mean_spectra(
-            processed_spectrum,
-            title=filetitle,
-            color=lineColor,
-            lw=.85)
+        axSpec = rs.plot.mean_spectra(
+            processed_spectra,
+            title=fileTitle,
+            plot_type='single stacked',
+            dist=False,
+            label=legend,
+            color=lineColors,
+            lw=1)
+
     else:
-        rs.plot.spectra(
-            processed_spectrum,
-            title=filetitle,
+        axSpec = rs.plot.spectra(
+            processed_spectra,
+            title=fileTitle,
             plot_type='single stacked',
             label=legend,
-            color=lineColor,
-            lw=.85)
+            color=lineColors,
+            lw=1)
 
     if plot_peaks:
-        _, peaks_found, peaks_prop = rs.plot.peaks(
-            processed_spectrum[0],
-            prominence=0.15,
-            color=lineColor,
-            lw=.5,
-            return_peaks=True)
-        print(
-            peaks_found,
-            '\n\n',
-            peaks_prop)
+        for spectrum in processed_spectra:
+            _, peaks_found, peaks_prop = rs.plot.peaks(
+                spectrum[0],
+                prominence=0.15,
+                color=lineColors,
+                lw=.5,
+                return_peaks=True)
 
-    # rs.plot.peak_dist(
-    #     [processed_spectrum],
-    #     478,
-    #     title=filetitle + ' peaks distribution',
-    #     # labels=['Region 1', 'Region 2', 'Region 3'],
-    #     # labels=['Region 1'],
-    #     color=lineColor)
+    drawPeaks(peakBands)
 
     plt.xlim([185, 1800])
-    # plt.subplots_adjust(
-    #     wspace=0.015, hspace=0.060,
-    #     top=0.950, bottom=0.100,
-    #     left=0.075, right=0.840)
-    plt.tight_layout()
-    # rs.plot.show()
+    plt.subplots_adjust(
+        wspace=.015, hspace=.060,
+        top=.950, bottom=.080,
+        left=.025, right=.850)
+    # plt.tight_layout()
+
+    plotPeakDist(processed_spectra, peakBands)
 
     if save:
-        plt.savefig(f'{filetitle}' + '.png', facecolor='w', dpi=300)
+        plt.savefig(f'{fileTitle}' + '.png', facecolor='snow', dpi=300)
 
     if plot_peaks:
-        return processed_spectrum, peaks_found, peaks_prop
+        return processed_spectra, peaks_found, peaks_prop
+
     else:
-        return processed_spectrum
+        return processed_spectra
 
 
 if __name__ == '__main__':
@@ -172,17 +229,21 @@ if __name__ == '__main__':
     #     'mediumseagreen',
     #     False, False, False)
 
-    st_cl = spectrum(
+    st_cl = raman(
         'St CLs',
         [
-            ["data/Powders/WSt Powder 10x Region 1.txt"],
-            ["data/St CL 0 Region 1.txt"],
-            ["data/St CL 7 Region 1.txt"],
-            ["data/St CL 14 Region 1.txt"],
-            ["data/St CL 21 Region 1.txt"],
+            [
+                "data/Powders/WSt Powder 10x Region 1.txt",
+                "data/Powders/WSt Powder 10x Region 2.txt",
+                "data/Powders/WSt Powder 10x Region 3.txt"],
+            ["data/St CL 0 Region 1.txt", "data/St CL 0 Region 2.txt"],
+            ["data/St CL 7 Region 1.txt", "data/St CL 7 Region 2.txt"],
+            ["data/St CL 14 Region 1.txt", "data/St CL 14 Region 2.txt"],
+            ["data/St CL 21 Region 1.txt", "data/St CL 21 Region 2.txt"],
         ],
         ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
-        'crimson',
-        False, False, False)
+        ['dimgrey', '#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
+        [478, 1130],
+        True, False, False)
 
     rs.plot.show()
