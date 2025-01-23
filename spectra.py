@@ -1,5 +1,5 @@
 import pandas as pd
-import ramanspy as rs
+import ramanspy as rp
 from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -7,6 +7,7 @@ from matplotlib.ticker import MultipleLocator
 
 
 def raman(
+        microscopy,
         fileTitle,
         filePath,
         regionToCrop,
@@ -26,7 +27,7 @@ def raman(
         plt.gca().xaxis.set_major_locator(MultipleLocator(100))
         plt.gca().xaxis.set_minor_locator(MultipleLocator(25))
 
-    def readDatas(directory_lists):
+    def readData(directory_lists):
 
         raw = []
 
@@ -38,8 +39,16 @@ def raman(
                 try:
                     data = pd.read_csv(filename)
 
-                    xData, yData = data['X-Axis'], data[data.keys()[-1]]
-                    raman_spectrum = rs.Spectrum(yData, xData)
+                    if microscopy:
+                        imageGrid = data['X-Axis']
+                        # delete grid column, transpose, convert to array and reshape to 100×100 by 1024 wavenumbers
+                        spectral_data = data.drop(columns='X-Axis').T.values.reshape(100, 100, 1024)
+                        raman_spectrum = rp.SpectralImage(spectral_data, imageGrid)
+
+                    else:
+                        xData, yData = data['X-Axis'], data[data.keys()[-1]]
+                        raman_spectrum = rp.Spectrum(yData, xData)
+
                     spectra.append(raman_spectrum)
 
                 except Exception as e:
@@ -54,12 +63,12 @@ def raman(
 
         def pipeline(spec):
 
-            routine = rs.preprocessing.Pipeline([
-                rs.preprocessing.misc.Cropper(region=regionToCrop),
-                rs.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
-                rs.preprocessing.denoise.SavGol(window_length=7, polyorder=3),
-                rs.preprocessing.baseline.ASPLS(),
-                rs.preprocessing.normalise.MinMax(pixelwise=True),
+            routine = rp.preprocessing.Pipeline([
+                rp.preprocessing.misc.Cropper(region=regionToCrop),
+                # rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
+                rp.preprocessing.denoise.SavGol(window_length=28, polyorder=3),
+                # rp.preprocessing.baseline.ASPLS(),
+                # rp.preprocessing.normalise.MinMax(pixelwise=True),
             ])
 
             return routine.apply(spec)
@@ -112,7 +121,7 @@ def raman(
             axPeak = fig.add_subplot(gs[0, 0])
             axPeak.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
 
-            rs.plot.peak_dist(
+            rp.plot.peak_dist(
                 spectra, band,
                 ax=axPeak,
                 title=fileTitle + f' peaks distribution at {band} cm$^{{{-1}}}$',
@@ -134,13 +143,13 @@ def raman(
     configFigure()
 
     # read & preprocess data
-    raw_spectra = readDatas(filePath)
-    processed_spectra = preprocess(raw_spectra)
-
     # TODO: try to auto the peak finder to directly pass to drawPeaks()
+    raw_spectra = readData(filePath)
+    processed_spectra = preprocess(raw_spectra)
+    processed_spectra[0][0].plot(peakBands, color='indigo')
 
     if plot_mean:
-        axSpec = rs.plot.mean_spectra(
+        axSpec = rp.plot.mean_spectra(
             processed_spectra,
             title=fileTitle,
             plot_type='single stacked',
@@ -150,7 +159,7 @@ def raman(
             lw=1)
 
     else:
-        axSpec = rs.plot.spectra(
+        axSpec = rp.plot.spectra(
             processed_spectra,
             title=fileTitle,
             plot_type='single stacked',
@@ -160,7 +169,7 @@ def raman(
 
     if plot_peaks:
         for spectrum in processed_spectra:
-            _, peaks_found, peaks_prop = rs.plot.peaks(
+            _, peaks_found, peaks_prop = rp.plot.peaks(
                 spectrum[0],
                 prominence=0.15,
                 color=lineColors,
@@ -190,22 +199,34 @@ def raman(
 
 if __name__ == '__main__':
 
-    st_cls = raman(
+    # st_cls = raman(
+    #     'St CLs',
+    #     [
+    #         [
+    #             "data/Powders/WSt Powder 10x Region 1.txt",
+    #             "data/Powders/WSt Powder 10x Region 2.txt",
+    #             "data/Powders/WSt Powder 10x Region 3.txt"],
+    #         ["data/St CLs/St CL 0 Region 1.txt", "data/St CLs/St CL 0 Region 2.txt"],
+    #         ["data/St CLs/St CL 7 Region 1.txt", "data/St CLs/St CL 7 Region 2.txt"],
+    #         ["data/St CLs/St CL 14 Region 1.txt", "data/St CLs/St CL 14 Region 2.txt"],
+    #         ["data/St CLs/St CL 21 Region 1.txt", "data/St CLs/St CL 21 Region 2.txt"],
+    #     ],
+    #     (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
+    #     ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
+    #     ['dimgrey', '#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
+    #     [478],
+    #     True, False, False)
+
+    img_st_cls = raman(
+        True,
         'St CLs',
         [
-            [
-                "data/Powders/WSt Powder 10x Region 1.txt",
-                "data/Powders/WSt Powder 10x Region 2.txt",
-                "data/Powders/WSt Powder 10x Region 3.txt"],
-            ["data/St CLs/St CL 0 Region 1.txt", "data/St CLs/St CL 0 Region 2.txt"],
-            ["data/St CLs/St CL 7 Region 1.txt", "data/St CLs/St CL 7 Region 2.txt"],
-            ["data/St CLs/St CL 14 Region 1.txt", "data/St CLs/St CL 14 Region 2.txt"],
-            ["data/St CLs/St CL 21 Region 1.txt", "data/St CLs/St CL 21 Region 2.txt"],
+            ["data/St CLs/Map St CL 0 Region 1.txt"],
         ],
-        (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
-        ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
-        ['dimgrey', '#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
-        [478],
-        True, False, False)
+        (85, 1800),  # all spectrum: (200, 1800); ideal: (300, 1500)
+        ['St CL 0'],
+        ['#E1C96B'],
+        [478, 1130],
+        False, False, False)
 
-    rs.plot.show()
+    rp.plot.show()
