@@ -9,6 +9,7 @@ from matplotlib.ticker import MultipleLocator
 def raman(
         fileTitle,
         filePath,
+        regionToCrop,
         legend,
         lineColors,
         peakBands,
@@ -54,7 +55,7 @@ def raman(
         def pipeline(spec):
 
             routine = rs.preprocessing.Pipeline([
-                rs.preprocessing.misc.Cropper(region=(200, 1800)),
+                rs.preprocessing.misc.Cropper(region=regionToCrop),
                 rs.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
                 rs.preprocessing.denoise.SavGol(window_length=7, polyorder=3),
                 rs.preprocessing.baseline.ASPLS(),
@@ -168,7 +169,7 @@ def raman(
 
     drawPeaks(peakBands)
 
-    plt.xlim([185, 1800])
+    plt.xlim(regionToCrop)
     plt.subplots_adjust(
         wspace=.015, hspace=.060,
         top=.950, bottom=.080,
@@ -189,46 +190,6 @@ def raman(
 
 if __name__ == '__main__':
 
-    # starch_powder = spectrum(
-    #     'Wheat starch powder',
-    #     [
-    #         "data/Powders/WSt Powder 10x Region 1.txt",
-    #         "data/Powders/WSt Powder 10x Region 2.txt",
-    #         "data/Powders/WSt Powder 10x Region 3.txt",
-    #     ],
-    #     None,
-    #     'orange',
-    #     True, True, False)
-    #
-    # kappa_powder = spectrum(
-    #     'Kappa carrageenan powder',
-    #     [
-    #         "data/Powders/kCar Powder Region 1.txt",
-    #         "data/Powders/kCar Powder Region 2.txt",
-    #         "data/Powders/kCar Powder Region 3.txt",
-    #         # "data/Powders/kCar Powder Region 4.txt",  # fotobleached
-    #     ],
-    #     None,
-    #     'deeppink',
-    #     False, False, False)
-    # # kappa_powder_fb = spectrum(
-    # #     'Kappa carrageenan fotobleached powder',
-    # #     [
-    # #         "data/Powders/kCar Powder Region 4.txt",
-    # #     ],
-    # #     'deeppink',
-    # #     True, True, False)
-    # cacl_powder = spectrum(
-    #     'CaCl$_2$ powder',
-    #     [
-    #         "data/Powders/CaCl2 Powder Region 1.txt",
-    #         "data/Powders/CaCl2 Powder Region 2.txt",
-    #         "data/Powders/CaCl2 Powder Region 3.txt",
-    #     ],
-    #     None,
-    #     'mediumseagreen',
-    #     False, False, False)
-
     st_cl = raman(
         'St CLs',
         [
@@ -241,9 +202,10 @@ if __name__ == '__main__':
             ["data/St CL 14 Region 1.txt", "data/St CL 14 Region 2.txt"],
             ["data/St CL 21 Region 1.txt", "data/St CL 21 Region 2.txt"],
         ],
+        (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
         ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
         ['dimgrey', '#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
-        [478, 1130],
+        [478],
         True, False, False)
 
     rs.plot.show()
