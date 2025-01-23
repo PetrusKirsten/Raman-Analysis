@@ -66,17 +66,17 @@ def raman(
 
         processed = []
 
-        for spectra_list in spectra_lists:
-            processed_sublist = []
+        for list_spectra in spectra_lists:
+            processed_sublist, peaks_sublist = [], []
 
-            for spectrum in spectra_list:
+            for ind_spectrum in list_spectra:
 
                 try:
-                    processed_spectrum = pipeline(spectrum)
+                    processed_spectrum = pipeline(ind_spectrum)
                     processed_sublist.append(processed_spectrum)
 
                 except Exception as e:
-                    print(f"Error processin the spectrum {spectrum}: {e}")
+                    print(f"Error processin the spectrum {ind_spectrum}: {e}")
                     processed_sublist.append(None)
 
             processed.append(processed_sublist)
@@ -190,17 +190,17 @@ def raman(
 
 if __name__ == '__main__':
 
-    st_cl = raman(
+    st_cls = raman(
         'St CLs',
         [
             [
                 "data/Powders/WSt Powder 10x Region 1.txt",
                 "data/Powders/WSt Powder 10x Region 2.txt",
                 "data/Powders/WSt Powder 10x Region 3.txt"],
-            ["data/St CL 0 Region 1.txt", "data/St CL 0 Region 2.txt"],
-            ["data/St CL 7 Region 1.txt", "data/St CL 7 Region 2.txt"],
-            ["data/St CL 14 Region 1.txt", "data/St CL 14 Region 2.txt"],
-            ["data/St CL 21 Region 1.txt", "data/St CL 21 Region 2.txt"],
+            ["data/St CLs/St CL 0 Region 1.txt", "data/St CLs/St CL 0 Region 2.txt"],
+            ["data/St CLs/St CL 7 Region 1.txt", "data/St CLs/St CL 7 Region 2.txt"],
+            ["data/St CLs/St CL 14 Region 1.txt", "data/St CLs/St CL 14 Region 2.txt"],
+            ["data/St CLs/St CL 21 Region 1.txt", "data/St CLs/St CL 21 Region 2.txt"],
         ],
         (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
         ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
