@@ -1,6 +1,6 @@
+import numpy as np
 import pandas as pd
 import ramanspy as rp
-from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
@@ -11,8 +11,8 @@ def ramanMicroscopy(
         filePath,
         regionToCrop,
         legend,
-        bandsColor,
         peakBands,
+        bandsColor,
         plot_map,
         plot_spectra,
         save
@@ -28,7 +28,7 @@ def ramanMicroscopy(
         return ax
 
     def readData(directory_lists):
-        # TODO: process map just by array, not by Spectrum obj
+        # TODO: process map just by array, not by Spectrum obj = processed_map.spectral_data
         maps = []
         for filename in directory_lists:
 
@@ -76,9 +76,13 @@ def ramanMicroscopy(
 
         return processed
 
+    def wnIndex(xAxis, wavenumber):  # find the nearest index to wavenumber
+        return np.abs(xAxis - wavenumber).argmin()
+
     def plotSpectra(img):
 
         axSpec = configFigure((16, 5))
+
         c = 0
         for region in range(len(img)):
             img[region][x-1, y-1].plot(
@@ -86,6 +90,11 @@ def ramanMicroscopy(
                 label=f'Region {region + 1} at ({x}, {y})',
                 color=f'C{c}', alpha=.75, lw=.85)
             c += 1
+
+            img[region].mean.plot(
+                ax=axSpec, title='',
+                label=f'Region {region + 1} Mean',
+                color=f'#383838', alpha=.75, lw=.85)
 
         drawPeaks(axSpec, peakBands)
         axSpec.set_xlim(regionToCrop)
@@ -115,6 +124,44 @@ def ramanMicroscopy(
                     axImg.plot(x, y, 'ro', markersize=2, zorder=2)
 
                 # axImg.spines[['top', 'bottom', 'left', 'right']].set_edgecolor('red')
+                plt.tight_layout()
+
+    def plotMicroscopy(img):
+
+        for region in range(len(img)):
+            for band in peakBands:
+                # TODO: read about unmixing & decomposition methods
+                dataArray, wavenumbers = img[region].spectral_data, img[region].spectral_axis
+
+                # TODO: choose appropriate way to quantify the map
+                a = wnIndex(wavenumbers, regionToCrop[0])
+                b = wnIndex(wavenumbers, regionToCrop[-1])
+                image_range = np.sum(dataArray[:, :, a:b], axis=2)
+
+                # image_specific = dataArray[:, :, wnIndex]
+                # # image_range = np.mean(dataArray[:, :, wnIndex-10:wnIndex+10], axis=2)
+                # image_max = np.max(dataArray, axis=2)
+                # image_mean = np.mean(dataArray, axis=2)
+
+                axMap = configFigure((9, 7), face='w')
+                plt.title(f'{legend[region]} | Peak intensity at {band} cm$^{{-1}}$')
+
+                # TODO: try to merge some maps
+                im = axMap.imshow(
+                    image_range,
+                    cmap='viridis',
+                    interpolation='none')
+
+                cbar = plt.colorbar(im, ax=axMap, label='')
+                cbar.set_ticks([])
+
+                if plot_spectra:
+                    axMap.plot(x, y, 'ro', markersize=2, zorder=2)
+
+                axMap.tick_params(
+                    axis='both', which='both',
+                    left=False, labelleft=False,
+                    bottom=False, labelbottom=False)
                 plt.tight_layout()
 
     def drawPeaks(ax, bands):
@@ -151,6 +198,8 @@ def ramanMicroscopy(
     if plot_map:
         plotMap(processed_map)
 
+    plotMicroscopy(processed_map)
+
     if save:
         plt.savefig(f'{fileTitle}' + '.png', facecolor='snow', dpi=300)
 
@@ -181,10 +230,10 @@ if __name__ == '__main__':
             # 'St CL 21 Region I',
             # 'St CL 21 Region II',
         ],
+        [62, 478],  # in wavenumber / Raman shift. Starch principal peak: 478 1;cm
         ['chocolate', 'mediumvioletred'],
-        [62, 478],  # starch principal peak: 478
-        True,
+        False,
         True,
         False)
 
-    rp.plot.show()
+    plt.show()
