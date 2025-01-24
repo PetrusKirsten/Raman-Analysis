@@ -7,6 +7,7 @@ from matplotlib.ticker import MultipleLocator
 
 
 def raman(
+        microscopy,
         fileTitle,
         filePath,
         regionToCrop,
@@ -38,8 +39,15 @@ def raman(
                 try:
                     data = pd.read_csv(filename)
 
-                    xData, yData = data['X-Axis'], data[data.keys()[-1]]
-                    raman_spectrum = rp.Spectrum(yData, xData)
+                    if microscopy:
+                        imageGrid = data['X-Axis']
+                        # delete grid column, transpose, convert to array and reshape to 100×100 by 1024 wavenumbers
+                        spectral_data = data.drop(columns='X-Axis').T.values.reshape(100, 100, 1024)
+                        raman_spectrum = rp.SpectralImage(spectral_data, imageGrid)
+
+                    else:
+                        xData, yData = data['X-Axis'], data[data.keys()[-1]]
+                        raman_spectrum = rp.Spectrum(yData, xData)
 
                     spectra.append(raman_spectrum)
 
@@ -57,12 +65,10 @@ def raman(
 
             routine = rp.preprocessing.Pipeline([
                 rp.preprocessing.misc.Cropper(region=regionToCrop),
-                rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
-                rp.preprocessing.denoise.SavGol(window_length=7, polyorder=3),
-                rp.preprocessing.baseline.ASPLS(),
-                # rp.preprocessing.normalise.Vector(pixelwise=False),
-                # rp.preprocessing.normalise.AUC(pixelwise=True),
-                rp.preprocessing.normalise.MinMax(pixelwise=False),
+                # rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
+                rp.preprocessing.denoise.SavGol(window_length=28, polyorder=3),
+                # rp.preprocessing.baseline.ASPLS(),
+                # rp.preprocessing.normalise.MinMax(pixelwise=True),
             ])
 
             return routine.apply(spec)
@@ -140,6 +146,7 @@ def raman(
     # TODO: try to auto the peak finder to directly pass to drawPeaks()
     raw_spectra = readData(filePath)
     processed_spectra = preprocess(raw_spectra)
+    processed_spectra[0][0].plot(peakBands, color='indigo')
 
     if plot_mean:
         axSpec = rp.plot.mean_spectra(
@@ -192,22 +199,34 @@ def raman(
 
 if __name__ == '__main__':
 
-    st_cls = raman(
+    # st_cls = raman(
+    #     'St CLs',
+    #     [
+    #         [
+    #             "data/Powders/WSt Powder 10x Region 1.txt",
+    #             "data/Powders/WSt Powder 10x Region 2.txt",
+    #             "data/Powders/WSt Powder 10x Region 3.txt"],
+    #         ["data/St CLs/St CL 0 Region 1.txt", "data/St CLs/St CL 0 Region 2.txt"],
+    #         ["data/St CLs/St CL 7 Region 1.txt", "data/St CLs/St CL 7 Region 2.txt"],
+    #         ["data/St CLs/St CL 14 Region 1.txt", "data/St CLs/St CL 14 Region 2.txt"],
+    #         ["data/St CLs/St CL 21 Region 1.txt", "data/St CLs/St CL 21 Region 2.txt"],
+    #     ],
+    #     (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
+    #     ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
+    #     ['dimgrey', '#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
+    #     [478],
+    #     True, False, False)
+
+    img_st_cls = raman(
+        True,
         'St CLs',
         [
-            [
-                "data/Powders/WSt Powder 10x Region 1.txt",
-                "data/Powders/WSt Powder 10x Region 2.txt",
-                "data/Powders/WSt Powder 10x Region 3.txt"],
-            ["data/St CLs/St CL 0 Region 1.txt", "data/St CLs/St CL 0 Region 2.txt"],
-            ["data/St CLs/St CL 7 Region 1.txt", "data/St CLs/St CL 7 Region 2.txt"],
-            ["data/St CLs/St CL 14 Region 1.txt", "data/St CLs/St CL 14 Region 2.txt"],
-            ["data/St CLs/St CL 21 Region 1.txt", "data/St CLs/St CL 21 Region 2.txt"],
-        ],  # TODO: add CaCl2 spectrum
-        (300, 1200),  # all spectrum: (200, 1800); ideal: (300, 1500)
-        ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
-        ['dimgrey', '#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
-        [478, 578, 940],
-        True, False, False)
+            ["data/St CLs/Map St CL 0 Region 1.txt"],
+        ],
+        (85, 1800),  # all spectrum: (200, 1800); ideal: (300, 1500)
+        ['St CL 0'],
+        ['#E1C96B'],
+        [478, 1130],
+        False, False, False)
 
     rp.plot.show()
