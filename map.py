@@ -11,22 +11,24 @@ def ramanMicroscopy(
         filePath,
         regionToCrop,
         legend,
-        lineColors,
+        bandsColor,
         peakBands,
         plot_map,
         plot_spectra,
         save
 ):
-    def configFigure():
+    def configFigure(size, face='snow'):
 
-        plt.style.use('seaborn-v0_8-ticks')
-        plt.figure(figsize=(16, 5), facecolor='snow').canvas.manager.set_window_title(fileTitle + ' - Raman spectra')
-        plt.gca().spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
-        plt.gca().xaxis.set_major_locator(MultipleLocator(100))
-        plt.gca().xaxis.set_minor_locator(MultipleLocator(25))
+        fig = plt.figure(figsize=size, facecolor=face)
+        # fig.canvas.manager.set_window_title(fileTitle + f' - peaks distribution at {band}')
+        gs = GridSpec(1, 1, width_ratios=[1], height_ratios=[1])
+        ax = fig.add_subplot(gs[0, 0])
+        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+
+        return ax
 
     def readData(directory_lists):
-
+        # TODO: process map just by array, not by Spectrum obj
         maps = []
         for filename in directory_lists:
 
@@ -75,18 +77,20 @@ def ramanMicroscopy(
         return processed
 
     def plotSpectra(img):
-        configFigure()
+
+        axSpec = configFigure((16, 5))
         c = 0
         for region in range(len(img)):
-            img[region][x-1, y-1].plot(label=f'Region {region + 1} at ({x}, {y})', color=f'C{c}', alpha=.75, lw=.85)
-            # img[region].plot(peakBands, label=f'Region {region+1}', color=f'deeppink')
+            img[region][x-1, y-1].plot(
+                ax=axSpec, title='',
+                label=f'Region {region + 1} at ({x}, {y})',
+                color=f'C{c}', alpha=.75, lw=.85)
             c += 1
 
-        plt.xlim(regionToCrop)
-        # plt.subplots_adjust(
-        #     wspace=.015, hspace=.060,
-        #     top=.950, bottom=.080,
-        #     left=.025, right=.850)
+        drawPeaks(axSpec, peakBands)
+        axSpec.set_xlim(regionToCrop)
+        axSpec.tick_params(axis='y', which='both', left=False, labelleft=False)
+        axSpec.xaxis.set_major_locator(MultipleLocator(100)), axSpec.xaxis.set_minor_locator(MultipleLocator(25))
         plt.tight_layout()
 
         return img
@@ -95,67 +99,51 @@ def ramanMicroscopy(
 
         for region in range(len(img)):
             for band in peakBands:
+                axImg = configFigure((7, 7), face='w')
 
-                axImg = rp.plot.image(
+                rp.plot.image(
                     img[region].band(band),
+                    ax=axImg,
                     title=legend[region],
-                    cbar_label=f"Peak intensity at {band} cm$^{-1}$",
-                    color='indigo')
+                    cbar=True,
+                    cbar_label=f"Peak intensity at {band} cm$^{{-1}}$",
+                    color=bandsColor[peakBands.index(band)],
+                    # interpolation='gaussian')
+                    )
 
                 if plot_spectra:
                     axImg.plot(x, y, 'ro', markersize=2, zorder=2)
 
-    # def drawPeaks(bands):
-    #
-    #     for band in bands:
-    #
-    #         axSpec.axvline(
-    #             band,
-    #             label='test',
-    #             color='whitesmoke',
-    #             lw=10,
-    #             ls='-',
-    #             alpha=.9,
-    #             zorder=-2)
-    #
-    #         axSpec.axvline(
-    #             band,
-    #             color='dimgray',
-    #             lw=.75,
-    #             ls=':',
-    #             alpha=.8,
-    #             zorder=-1)
+                # axImg.spines[['top', 'bottom', 'left', 'right']].set_edgecolor('red')
+                plt.tight_layout()
 
-    # def plotPeakDist(spectra, bands):
-    #     for band in bands:
-    #         fig = plt.figure(figsize=(8, 7), facecolor='snow')
-    #         fig.canvas.manager.set_window_title(fileTitle + f' - peaks distribution at {band}')
-    #         gs = GridSpec(1, 1, width_ratios=[1], height_ratios=[1])
-    #         axPeak = fig.add_subplot(gs[0, 0])
-    #         axPeak.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
-    #
-    #         rp.plot.peak_dist(
-    #             spectra, band,
-    #             ax=axPeak,
-    #             title=fileTitle + f' peaks distribution at {band} cm$^{{{-1}}}$',
-    #             labels=legend,
-    #             color=lineColors,
-    #             alpha=.8,
-    #             edgecolor='#383838',
-    #             linewidth=.85,
-    #             ecolor='#252525',
-    #         )
-    #
-    #         plt.tight_layout()
+    def drawPeaks(ax, bands):
 
-    # create some vars
-    # peaks_found, peaks_prop, axSpec = None, None, None
+        for band in bands:
+            ax.axvline(
+                band,
+                label='test',
+                color='whitesmoke',
+                lw=10,
+                ls='-',
+                alpha=.9,
+                zorder=-2)
+
+            ax.axvline(
+                band,
+                color='dimgray',
+                lw=.75,
+                ls=':',
+                alpha=.8,
+                zorder=-1)
 
     # read & preprocess data
+    plt.style.use('seaborn-v0_8-ticks')
+
     raw_map = readData(filePath)
     processed_map = preprocess(raw_map, 16)
 
-    x, y = 18, 97  # to plot the spectrum at this pixel
+    x, y = 50, 50  # to plot the spectrum at this pixel
 
     if plot_spectra:
         plotSpectra(processed_map)
@@ -174,19 +162,27 @@ if __name__ == '__main__':
         'St CLs',
         [
             "data/St CLs/Map St CL 0 Region 1.txt",
-            "data/St CLs/Map St CL 0 Region 2.txt",
-            "data/St CLs/Map St CL 7 Region 1.txt",
-            "data/St CLs/Map St CL 7 Region 2.txt",
+            # "data/St CLs/Map St CL 0 Region 2.txt",
+            # "data/St CLs/Map St CL 7 Region 1.txt",
+            # "data/St CLs/Map St CL 7 Region 2.txt",
+            # "data/St CLs/Map St CL 14 Region 1.txt",
+            # "data/St CLs/Map St CL 14 Region 2.txt",
+            # "data/St CLs/Map St CL 21 Region 1.txt",
+            # "data/St CLs/Map St CL 21 Region 2.txt",
         ],
-        (100, 1800),  # all spectrum: (200, 1800); ideal: (300, 1500)
+        (35, 1800),  # all spectrum: (200, 1800); ideal: (300, 1500)
         [
             'St CL 0 Region I',
-            'St CL 0 Region II',
-            'St CL 7 Region I',
-            'St CL 7 Region II'
+            # 'St CL 0 Region II',
+            # 'St CL 7 Region I',
+            # 'St CL 7 Region II',
+            # 'St CL 14 Region I',
+            # 'St CL 14 Region II',
+            # 'St CL 21 Region I',
+            # 'St CL 21 Region II',
         ],
-        ['#E1C96B'],
-        [478],  # starch principal peak: 478
+        ['chocolate', 'mediumvioletred'],
+        [62, 478],  # starch principal peak: 478
         True,
         True,
         False)
