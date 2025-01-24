@@ -6,7 +6,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
 
 
-def raman(
+def ramanSpectrum(
         fileTitle,
         filePath,
         regionToCrop,
@@ -192,7 +192,7 @@ def raman(
 
 if __name__ == '__main__':
 
-    st_cls = raman(
+    st_cls = ramanSpectrum(
         'St CLs',
         [
             [
