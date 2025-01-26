@@ -28,7 +28,7 @@ def ramanMicroscopy(
         return ax
 
     def readData(directory_lists):
-        # TODO: process map just by array, not by Spectrum obj = processed_map.spectral_data
+
         maps = []
         for filename in directory_lists:
 
@@ -85,7 +85,7 @@ def ramanMicroscopy(
 
         c = 0
         for region in range(len(img)):
-            img[region][x-1, y-1].plot(
+            img[region][x - 1, y - 1].plot(
                 ax=axSpec, title='',
                 label=f'Region {region + 1} at ({x}, {y})',
                 color=f'C{c}', alpha=.75, lw=.85)
@@ -104,44 +104,54 @@ def ramanMicroscopy(
 
         return img
 
-    def plotMap(img):
+    def plotAnalysis(img):
+        # TODO: read about unmixing & decomposition methods
 
         for region in range(len(img)):
-            for band in peakBands:
-                axImg = configFigure((7, 7), face='w')
+            for band, color in zip(peakBands, bandsColor):
+
+                pca = rp.analysis.decompose.PCA(n_components=4)
+                projections, components = pca.apply(img[region])
+                print(projections)
+
+                plt.title(f'{legend[region]} | Peak intensity at {band} cm$^{{-1}}$')
+
+                rp.plot.spectra(
+                    components,
+                    img[region].spectral_axis,
+                    plot_type="single stacked",
+                    color='red',
+                    label=[f"Component {i + 1}" for i in range(len(components))])
 
                 rp.plot.image(
-                    img[region].band(band),
-                    ax=axImg,
-                    title=legend[region],
-                    cbar=True,
-                    cbar_label=f"Peak intensity at {band} cm$^{{-1}}$",
-                    color=bandsColor[peakBands.index(band)],
-                    # interpolation='gaussian')
-                    )
+                    projections,
+                    color='red',
+                    title=[f"Projection {i + 1}" for i in range(len(projections))])
 
-                if plot_spectra:
-                    axImg.plot(x, y, 'ro', markersize=2, zorder=2)
-
-                # axImg.spines[['top', 'bottom', 'left', 'right']].set_edgecolor('red')
                 plt.tight_layout()
 
     def plotMicroscopy(img):
 
+        def threshold(data):
+
+            def condition(array):
+                return array > array.mean()
+
+            return np.where(condition(data), 1, 0).astype(float)
+
         for region in range(len(img)):
-            for band in peakBands:
-                # TODO: read about unmixing & decomposition methods
+            for band, color in zip(peakBands, bandsColor):
+
                 dataArray, wavenumbers = img[region].spectral_data, img[region].spectral_axis
 
                 # TODO: choose appropriate way to quantify the map
-                a = wnIndex(wavenumbers, regionToCrop[0])
-                b = wnIndex(wavenumbers, regionToCrop[-1])
+                a, b = wnIndex(wavenumbers, regionToCrop[0]), wnIndex(wavenumbers, regionToCrop[-1])
+                image_range = dataArray[:, :, wnIndex(wavenumbers, band)]
                 image_range = np.sum(dataArray[:, :, a:b], axis=2)
-
-                # image_specific = dataArray[:, :, wnIndex]
                 # # image_range = np.mean(dataArray[:, :, wnIndex-10:wnIndex+10], axis=2)
                 # image_max = np.max(dataArray, axis=2)
                 # image_mean = np.mean(dataArray, axis=2)
+                alphaArray = threshold(image_range)
 
                 axMap = configFigure((9, 7), face='w')
                 plt.title(f'{legend[region]} | Peak intensity at {band} cm$^{{-1}}$')
@@ -149,8 +159,9 @@ def ramanMicroscopy(
                 # TODO: try to merge some maps
                 im = axMap.imshow(
                     image_range,
-                    cmap='viridis',
-                    interpolation='none')
+                    alpha=1.,
+                    cmap=color,
+                    interpolation='none',)
 
                 cbar = plt.colorbar(im, ax=axMap, label='')
                 cbar.set_ticks([])
@@ -196,7 +207,7 @@ def ramanMicroscopy(
         plotSpectra(processed_map)
 
     if plot_map:
-        plotMap(processed_map)
+        plotAnalysis(processed_map)
 
     plotMicroscopy(processed_map)
 
@@ -211,7 +222,7 @@ if __name__ == '__main__':
         'St CLs',
         [
             "data/St CLs/Map St CL 0 Region 1.txt",
-            # "data/St CLs/Map St CL 0 Region 2.txt",
+            "data/St CLs/Map St CL 0 Region 2.txt",
             # "data/St CLs/Map St CL 7 Region 1.txt",
             # "data/St CLs/Map St CL 7 Region 2.txt",
             # "data/St CLs/Map St CL 14 Region 1.txt",
@@ -219,10 +230,10 @@ if __name__ == '__main__':
             # "data/St CLs/Map St CL 21 Region 1.txt",
             # "data/St CLs/Map St CL 21 Region 2.txt",
         ],
-        (35, 1800),  # all spectrum: (200, 1800); ideal: (300, 1500)
+        (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
         [
             'St CL 0 Region I',
-            # 'St CL 0 Region II',
+            'St CL 0 Region II',
             # 'St CL 7 Region I',
             # 'St CL 7 Region II',
             # 'St CL 14 Region I',
@@ -230,8 +241,8 @@ if __name__ == '__main__':
             # 'St CL 21 Region I',
             # 'St CL 21 Region II',
         ],
-        [62, 478],  # in wavenumber / Raman shift. Starch principal peak: 478 1;cm
-        ['chocolate', 'mediumvioletred'],
+        [478],  # in wavenumber / Raman shift. Starch principal peak: 478 1/cm
+        ['summer'],
         False,
         True,
         False)
