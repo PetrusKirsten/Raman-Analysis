@@ -85,16 +85,20 @@ def ramanMicroscopy(
 
         c = 0
         for region in range(len(img)):
+
             img[region][x - 1, y - 1].plot(
                 ax=axSpec, title='',
                 label=f'Region {region + 1} at ({x}, {y})',
-                color=f'C{c}', alpha=.75, lw=.85)
-            c += 1
+                color=f'C{c}', ls='-',
+                alpha=.75, lw=.85)
 
             img[region].mean.plot(
                 ax=axSpec, title='',
                 label=f'Region {region + 1} Mean',
-                color=f'#383838', alpha=.75, lw=.85)
+                color=f'C{c}', ls=':',
+                alpha=.9, lw=1.)
+
+            c += 1
 
         drawPeaks(axSpec, peakBands)
         axSpec.set_xlim(regionToCrop)
@@ -130,7 +134,7 @@ def ramanMicroscopy(
 
                 plt.tight_layout()
 
-    def plotMicroscopy(img):
+    def plotMap(img):
 
         def threshold(data):
 
@@ -139,45 +143,81 @@ def ramanMicroscopy(
 
             return np.where(condition(data), 1, 0).astype(float)
 
+        def showImage(
+                title,
+                gridData,
+                colorMap
+        ):
+
+            axMap = configFigure((9, 7), face='w')
+            plt.title(title)
+
+            # TODO: try to merge some maps
+            im = axMap.imshow(
+                gridData,
+                alpha=1.,
+                cmap=colorMap,
+                interpolation='none', )
+
+            cbar = plt.colorbar(im, ax=axMap, label='')
+            cbar.set_ticks([])
+
+            if plot_spectra:
+                axMap.plot(x, y, 'ro', markersize=2, zorder=2)
+
+            axMap.tick_params(
+                axis='both', which='both',
+                left=False, labelleft=False,
+                bottom=False, labelbottom=False)
+            plt.tight_layout()
+
         for region in range(len(img)):
             for band, color in zip(peakBands, bandsColor):
 
                 dataArray, wavenumbers = img[region].spectral_data, img[region].spectral_axis
+                bandIndex = wnIndex(wavenumbers, band)
+                avgWNstep = wavenumbers[-1] / len(wavenumbers)  # average wavenumbers step = spectrum resolution
 
                 # TODO: choose appropriate way to quantify the map
-                a, b = wnIndex(wavenumbers, regionToCrop[0]), wnIndex(wavenumbers, regionToCrop[-1])
-                image_range = dataArray[:, :, wnIndex(wavenumbers, band)]
-                image_range = np.sum(dataArray[:, :, a:b], axis=2)
-                # # image_range = np.mean(dataArray[:, :, wnIndex-10:wnIndex+10], axis=2)
-                # image_max = np.max(dataArray, axis=2)
-                # image_mean = np.mean(dataArray, axis=2)
-                alphaArray = threshold(image_range)
 
-                axMap = configFigure((9, 7), face='w')
-                plt.title(f'{legend[region]} | Peak intensity at {band} cm$^{{-1}}$')
+                # specific peak intensity
+                peak_intensity = dataArray[:, :, bandIndex]
+                showImage(
+                    f'{legend[region]} | Peak intensity at {band} cm$^{{-1}}$',
+                    peak_intensity,
+                    color)
 
-                # TODO: try to merge some maps
-                im = axMap.imshow(
-                    image_range,
-                    alpha=1.,
-                    cmap=color,
-                    interpolation='none',)
+                # specific peak/band/region sum
+                negStep, posStep = wnIndex(wavenumbers, band - 10), wnIndex(wavenumbers, band + 10)
+                band_sum = np.sum(
+                    dataArray[:, :, negStep:posStep],
+                    axis=2)
+                showImage(
+                    f'{legend[region]} | Band sum at {band} cm$^{{-1}}$',
+                    band_sum,
+                    color)
 
-                cbar = plt.colorbar(im, ax=axMap, label='')
-                cbar.set_ticks([])
+                # topography map / sum of the area along all wavenumbers
+                start, end = wnIndex(wavenumbers, regionToCrop[0]), wnIndex(wavenumbers, regionToCrop[-1])
+                topography = np.sum(dataArray[:, :, start:end], axis=2)
+                showImage(
+                    f'{legend[region]} | Topography.',
+                    topography,
+                    color)
 
-                if plot_spectra:
-                    axMap.plot(x, y, 'ro', markersize=2, zorder=2)
+                # peak subtracted by the topography map
+                showImage(
+                    f'{legend[region]} | Band sum subtracted by topography.',
+                    band_sum - topography,
+                    color)
 
-                axMap.tick_params(
-                    axis='both', which='both',
-                    left=False, labelleft=False,
-                    bottom=False, labelbottom=False)
-                plt.tight_layout()
+                # array to determine transparency of the imagem based on a threshold on data
+                alphaArray = threshold(topography)
 
     def drawPeaks(ax, bands):
 
         for band in bands:
+            # shadow region
             ax.axvline(
                 band,
                 label='test',
@@ -187,11 +227,29 @@ def ramanMicroscopy(
                 alpha=.9,
                 zorder=-2)
 
+            # black line
             ax.axvline(
                 band,
                 color='dimgray',
                 lw=.75,
-                ls=':',
+                ls='-',
+                alpha=.8,
+                zorder=-1)
+
+            # borders of the band region
+            ax.axvline(
+                band-10,
+                color='dimgray',
+                lw=.75,
+                ls='-',
+                alpha=.8,
+                zorder=-1)
+
+            ax.axvline(
+                band+10,
+                color='dimgray',
+                lw=.75,
+                ls='-',
                 alpha=.8,
                 zorder=-1)
 
@@ -209,7 +267,7 @@ def ramanMicroscopy(
     if plot_map:
         plotAnalysis(processed_map)
 
-    plotMicroscopy(processed_map)
+    plotMap(processed_map)
 
     if save:
         plt.savefig(f'{fileTitle}' + '.png', facecolor='snow', dpi=300)
@@ -222,7 +280,7 @@ if __name__ == '__main__':
         'St CLs',
         [
             "data/St CLs/Map St CL 0 Region 1.txt",
-            "data/St CLs/Map St CL 0 Region 2.txt",
+            # "data/St CLs/Map St CL 0 Region 2.txt",
             # "data/St CLs/Map St CL 7 Region 1.txt",
             # "data/St CLs/Map St CL 7 Region 2.txt",
             # "data/St CLs/Map St CL 14 Region 1.txt",
@@ -233,7 +291,7 @@ if __name__ == '__main__':
         (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
         [
             'St CL 0 Region I',
-            'St CL 0 Region II',
+            # 'St CL 0 Region II',
             # 'St CL 7 Region I',
             # 'St CL 7 Region II',
             # 'St CL 14 Region I',
