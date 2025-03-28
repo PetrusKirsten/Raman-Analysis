@@ -1,6 +1,6 @@
 import pandas as pd
 import ramanspy as rp
-from scipy.signal import find_peaks
+# from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
@@ -8,20 +8,23 @@ from matplotlib.ticker import MultipleLocator
 
 def ramanSpectrum(
         fileTitle,
+        samples,
         filePath,
         regionToCrop,
-        legend,
         lineColors,
         peakBands,
         plot_mean,
         plot_peaks,
+        find_peaks,
         save
 ):
 
     def configFigure():
+        dpi = 300
+        width, height = 1920*2 / dpi, 1080*2 / dpi
 
         plt.style.use('seaborn-v0_8-ticks')
-        plt.figure(figsize=(16, 9), facecolor='snow').canvas.manager.set_window_title(fileTitle + ' - Raman spectra')
+        plt.figure(figsize=(width, height), facecolor='snow').canvas.manager.set_window_title(fileTitle + ' - Raman spectra')
         plt.gca().spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
         plt.gca().xaxis.set_major_locator(MultipleLocator(100))
         plt.gca().xaxis.set_minor_locator(MultipleLocator(25))
@@ -59,32 +62,21 @@ def ramanSpectrum(
                 rp.preprocessing.misc.Cropper(region=regionToCrop),
                 rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
                 rp.preprocessing.denoise.SavGol(window_length=7, polyorder=3),
-                rp.preprocessing.baseline.ASPLS(),
-                # rp.preprocessing.normalise.Vector(pixelwise=False),
+                rp.preprocessing.baseline.ASLS(),
+                # rp.preprocessing.normalise.Vector(pixelwise=True),
                 # rp.preprocessing.normalise.AUC(pixelwise=True),
-                rp.preprocessing.normalise.MinMax(pixelwise=False),
+                # rp.preprocessing.normalise.MinMax(pixelwise=False),
             ])
 
             return routine.apply(spec)
 
-        processed = []
+        processed, spectra = pipeline([item for sublist in spectra_lists.values() for item in sublist]), {}
+        index = 0
+        for key, sublist in spectra_lists.items():
+            spectra[key] = processed[index: index + len(sublist)]
+            index += len(sublist)
 
-        for list_spectra in spectra_lists:
-            processed_sublist, peaks_sublist = [], []
-
-            for ind_spectrum in list_spectra:
-
-                try:
-                    processed_spectrum = pipeline(ind_spectrum)
-                    processed_sublist.append(processed_spectrum)
-
-                except Exception as e:
-                    print(f"Error processin the spectrum {ind_spectrum}: {e}")
-                    processed_sublist.append(None)
-
-            processed.append(processed_sublist)
-
-        return processed
+        return spectra
 
     def drawPeaks(bands):
 
@@ -119,7 +111,7 @@ def ramanSpectrum(
                 spectra, band,
                 ax=axPeak,
                 title=fileTitle + f' peaks distribution at {band} cm$^{{{-1}}}$',
-                labels=legend,
+                labels=samples,
                 color=lineColors,
                 alpha=.8,
                 edgecolor='#383838',
@@ -131,37 +123,37 @@ def ramanSpectrum(
 
     # create some vars
     peaks_found, peaks_prop, axSpec = None, None, None
-    if legend is None:
-        legend = [f'Region {i + 1}' for i in range(len(filePath))]
+    if samples is None:
+        samples = [f'Region {i + 1}' for i in range(len(filePath))]
 
     configFigure()
 
     # read & preprocess data
     # TODO: try to auto the peak finder to directly pass to drawPeaks()
     raw_spectra = readData(filePath)
-    processed_spectra = preprocess(raw_spectra)
+    processed_spectra = preprocess(dict(zip(samples, raw_spectra)))
 
     if plot_mean:
         axSpec = rp.plot.mean_spectra(
-            processed_spectra,
+            list(processed_spectra.values()),
             title=fileTitle,
             plot_type='single stacked',
-            dist=False,
-            label=legend,
+            dist=True,
+            label=samples,
             color=lineColors,
             lw=1)
 
     else:
         axSpec = rp.plot.spectra(
-            processed_spectra,
+            list(processed_spectra.values()),
             title=fileTitle,
             plot_type='single stacked',
-            label=legend,
+            label=samples,
             color=lineColors,
             lw=1)
 
-    if plot_peaks:
-        for spectrum in processed_spectra:
+    if find_peaks:
+        for spectrum in processed_spectra.values():
             _, peaks_found, peaks_prop = rp.plot.peaks(
                 spectrum[0],
                 prominence=0.15,
@@ -175,39 +167,98 @@ def ramanSpectrum(
     plt.subplots_adjust(
         wspace=.015, hspace=.060,
         top=.950, bottom=.080,
-        left=.025, right=.850)
+        left=.025, right=.880)
     # plt.tight_layout()
-
-    plotPeakDist(processed_spectra, peakBands)
 
     if save:
         plt.savefig(f'{fileTitle}' + '.png', facecolor='snow', dpi=300)
 
     if plot_peaks:
-        return processed_spectra, peaks_found, peaks_prop
+        plotPeakDist(list(processed_spectra.values()), peakBands)
 
-    else:
-        return processed_spectra
+    return processed_spectra, peaks_found, peaks_prop if find_peaks else processed_spectra
 
 
 if __name__ == '__main__':
 
-    st_cls = ramanSpectrum(
-        'St CLs',
+    precursors = ramanSpectrum(
+        'Precursors in powder',
+        ['St', 'kCar', 'CaCl2'],
         [
             [
                 "data/Powders/WSt Powder 10x Region 1.txt",
                 "data/Powders/WSt Powder 10x Region 2.txt",
-                "data/Powders/WSt Powder 10x Region 3.txt"],
-            ["data/St CLs/St CL 0 Region 1.txt", "data/St CLs/St CL 0 Region 2.txt"],
-            ["data/St CLs/St CL 7 Region 1.txt", "data/St CLs/St CL 7 Region 2.txt"],
-            ["data/St CLs/St CL 14 Region 1.txt", "data/St CLs/St CL 14 Region 2.txt"],
-            ["data/St CLs/St CL 21 Region 1.txt", "data/St CLs/St CL 21 Region 2.txt"],
-        ],  # TODO: add CaCl2 spectrum
-        (300, 1200),  # all spectrum: (200, 1800); ideal: (300, 1500)
-        ['St Powder', 'St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
-        ['dimgrey', '#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
-        [478, 578, 940],
-        True, False, False)
+                "data/Powders/WSt Powder 10x Region 3.txt"
+            ],
+            [
+                "data/Powders/kCar Powder Region 1.txt",
+                "data/Powders/kCar Powder Region 2.txt",
+                "data/Powders/kCar Powder Region 3.txt"
+            ],
+            [
+                "data/Powders/CaCl2 Powder Region 1.txt",
+                "data/Powders/CaCl2 Powder Region 2.txt",
+                "data/Powders/CaCl2 Powder Region 3.txt",
+                "data/Powders/CaCl2 Powder Region 4.txt",
+                "data/Powders/CaCl2 Powder Region 5.txt",
+            ],
+        ],
+        (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
+        ['gold', 'deeppink', 'dodgerblue'],
+        [],
+        True, False, False, False
+    )
+
+    # cacl = ramanSpectrum(
+    #     'St kCar CLs',
+    #     ['1'],
+    #     [
+    #         [
+    #             "data/Powders/CaCl2 Powder Region 1.txt",
+    #         # ],
+    #         # [
+    #             "data/Powders/CaCl2 Powder Region 2.txt",
+    #         # ],
+    #         # [
+    #             "data/Powders/CaCl2 Powder Region 3.txt",
+    #         # ],
+    #         # [
+    #             "data/Powders/CaCl2 Powder Region 4.txt",
+    #         # ],
+    #         # [
+    #             "data/Powders/CaCl2 Powder Region 5.txt",
+    #         ],
+    #     ],
+    #     (200, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
+    #     ['C1'],
+    #     [],
+    #     True, False, False, False)
+
+    # st_kc_cls = ramanSpectrum(
+    #     'St kCar CLs',
+    #     ['St kCar CL 0', 'St kCar CL 7', 'St kCar CL 14', 'St kCar CL 21', ],
+    #     [
+    #         [
+    #             "data/St kC CLs/St kC CL 0 Region 1.txt",
+    #             "data/St kC CLs/St kC CL 0 Region 2.txt"
+    #         ],
+    #         [
+    #             "data/St kC CLs/St kC CL 7 Region 1.txt",
+    #             "data/St kC CLs/St kC CL 7 Region 2.txt"
+    #         ],
+    #         [
+    #             "data/St kC CLs/St kC CL 14 Region 1.txt",
+    #             "data/St kC CLs/St kC CL 14 Region 2.txt"
+    #         ],
+    #         [
+    #             "data/St kC CLs/St kC CL 21 Region 1.txt",
+    #             "data/St kC CLs/St kC CL 21 Region 2.txt"
+    #         ],
+    #     ],
+    #     (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
+    #     ['lightpink', 'hotpink', 'deeppink', 'crimson'],
+    #     [941, 845, 1220, 1050],
+    #     True, False, False, False)
 
     rp.plot.show()
+

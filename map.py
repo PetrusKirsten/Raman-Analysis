@@ -56,6 +56,7 @@ def ramanMicroscopy(
                 rp.preprocessing.misc.Cropper(region=regionToCrop),
                 rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
                 rp.preprocessing.denoise.SavGol(window_length=winLen, polyorder=3),
+                # rp.preprocessing.baseline.ASLS(),
                 # rp.preprocessing.baseline.FABC(),
                 # rp.preprocessing.normalise.MinMax(pixelwise=0, a=0, b=100),
                 # rp.preprocessing.normalise.Vector(pixelwise=0),
@@ -95,7 +96,7 @@ def ramanMicroscopy(
             img[region].mean.plot(
                 ax=axSpec, title='',
                 label=f'Region {region + 1} Mean',
-                color=f'C{c}', ls=':',
+                color=f'silver', ls=':',
                 alpha=.9, lw=1.)
 
             c += 1
@@ -157,7 +158,7 @@ def ramanMicroscopy(
                 gridData,
                 alpha=1.,
                 cmap=colorMap,
-                interpolation='none', )
+                interpolation='gaussian', )
 
             cbar = plt.colorbar(im, ax=axMap, label='')
             cbar.set_ticks([])
@@ -279,6 +280,8 @@ if __name__ == '__main__':
     ramanMicroscopy(
         'St CLs',
         [
+            # "data/Carrageenans/Map 5pct kC Region 1.txt",
+            # "data/Carrageenans/Map 5pct iC Region 1.txt",
             "data/St CLs/Map St CL 0 Region 1.txt",
             # "data/St CLs/Map St CL 0 Region 2.txt",
             # "data/St CLs/Map St CL 7 Region 1.txt",
@@ -290,6 +293,8 @@ if __name__ == '__main__':
         ],
         (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
         [
+            # '5pct kC Region 1',
+            # '5pct iC Region 1',
             'St CL 0 Region I',
             # 'St CL 0 Region II',
             # 'St CL 7 Region I',
@@ -300,9 +305,7 @@ if __name__ == '__main__':
             # 'St CL 21 Region II',
         ],
         [478],  # in wavenumber / Raman shift. Starch principal peak: 478 1/cm
-        ['summer'],
-        False,
-        True,
-        False)
+        ['Grays'],
+        False, False, False)
 
     plt.show()
