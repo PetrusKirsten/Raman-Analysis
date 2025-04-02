@@ -183,163 +183,27 @@ def ramanSpectrum(
 
 if __name__ == '__main__':
 
-    # precursors = ramanSpectrum(
-    #     'Precursors in powder',
-    #     ['St', 'kCar', 'CaCl2'],
-    #     [
-    #         [
-    #             "data/Powders/WSt Powder 10x Region 1.txt",
-    #             "data/Powders/WSt Powder 10x Region 2.txt",
-    #             "data/Powders/WSt Powder 10x Region 3.txt"
-    #         ],
-    #         [
-    #             "data/Powders/kCar Powder Region 1.txt",
-    #             "data/Powders/kCar Powder Region 2.txt",
-    #             "data/Powders/kCar Powder Region 3.txt"
-    #         ],
-    #         [
-    #             "data/Powders/CaCl2 Powder Region 1.txt",
-    #             "data/Powders/CaCl2 Powder Region 2.txt",
-    #             "data/Powders/CaCl2 Powder Region 3.txt",
-    #             "data/Powders/CaCl2 Powder Region 4.txt",
-    #             "data/Powders/CaCl2 Powder Region 5.txt",
-    #         ],
-    #     ],
-    #     (200, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
-    #     ['goldenrod', '#FF0831', 'lightsteelblue'],
-    #     [],
-    #     True, False, False, True
-    # )
+    peaks = [478, 805, 850, 1220, 1263]
 
-    # cacl = ramanSpectrum(
-    #     'CaCl2 in powder - different regions',
-    #     ['Region 1', 'Region 2', 'Region 3', 'Region 4', 'Region 5'],
-    #     [
-    #             ["data/Powders/CaCl2 Powder Region 1.txt"],
-    #             ["data/Powders/CaCl2 Powder Region 2.txt"],
-    #             ["data/Powders/CaCl2 Powder Region 3.txt"],
-    #             ["data/Powders/CaCl2 Powder Region 4.txt"],
-    #             ["data/Powders/CaCl2 Powder Region 5.txt"],
-    #     ],
-    #     (200, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
-    #     ['C1', 'C2', 'C3', 'C4', 'C5'],
-    #     [],
-    #     False, False, False, True
-    # )
-
-    # st_cls = ramanSpectrum(
-    #     'St CLs - normalized by 478 1/cm peak',
-    #     ['St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
-    #     [
-    #         [
-    #             "data/St CLs/St CL 0 Region 1.txt",
-    #             "data/St CLs/St CL 0 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St CLs/St CL 7 Region 1.txt",
-    #             "data/St CLs/St CL 7 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St CLs/St CL 14 Region 1.txt",
-    #             "data/St CLs/St CL 14 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St CLs/St CL 21 Region 1.txt",
-    #             "data/St CLs/St CL 21 Region 2.txt"
-    #         ],
-    #     ],
-    #     (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
-    #     [
-    #         # No CL
-    #         '#E1C96B',
-    #         # CL 7
-    #         'gold',
-    #         # CL 14
-    #         '#F1A836',
-    #         # CL 28
-    #         '#E36E34',
-    #     ],
-    #     [478, 941, 1050, 1220],
-    #     True, True, False, False)
-    #
-    # st_kc_cls = ramanSpectrum(
-    #     'St kCar CLs - normalized by 478 1/cm peak',
-    #     ['St kCar CL 0', 'St kCar CL 7', 'St kCar CL 14', 'St kCar CL 21', ],
-    #     [
-    #         [
-    #             "data/St kC CLs/St kC CL 0 Region 1.txt",
-    #             "data/St kC CLs/St kC CL 0 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St kC CLs/St kC CL 7 Region 1.txt",
-    #             "data/St kC CLs/St kC CL 7 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St kC CLs/St kC CL 14 Region 1.txt",
-    #             "data/St kC CLs/St kC CL 14 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St kC CLs/St kC CL 21 Region 1.txt",
-    #             "data/St kC CLs/St kC CL 21 Region 2.txt"
-    #         ],
-    #     ],
-    #     (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
-    #     ['lightpink', 'hotpink', 'deeppink', 'crimson'],
-    #     [478, 941, 1050, 1220],
-    #     True, True, False, False)
-
-    # st_ic_cls = ramanSpectrum(
-    #     'St iCar CLs - normalized by 478 1/cm peak',
-    #     ['St iCar CL 0', 'St iCar CL 7', 'St iCar CL 14', 'St iCar CL 21', ],
-    #     [
-    #         [
-    #             "data/St iC CLs/St iC CL 0 Region 1.txt",
-    #             "data/St iC CLs/St iC CL 0 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St iC CLs/St iC CL 7 Region 1.txt",
-    #             "data/St iC CLs/St iC CL 7 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St iC CLs/St iC CL 14 Region 1.txt",
-    #             "data/St iC CLs/St iC CL 14 Region 2.txt"
-    #         ],
-    #         [
-    #             "data/St iC CLs/St iC CL 21 Region 1.txt",
-    #             "data/St iC CLs/St iC CL 21 Region 2.txt"
-    #         ],
-    #     ],
-    #     (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
-    #     [
-    #         # No CL
-    #         'lightskyblue',
-    #         # CL 7
-    #         '#62BDC1',
-    #         # CL 14
-    #         '#31A887',
-    #         # CL 28
-    #         '#08653A',
-    #     ],
-    #     [478, 805, 1048, 1220, 1263],
-    #     True, True, False, False)
-
-    peaks = [478, 805, 850, 941, 1048, 1053, 1700]
-
-    st_cls_zero = ramanSpectrum(
-        'Blends CLs 0',
-        ['St CL 0', 'St kCar CL 0', 'St iCar CL 0',],
+    st_cls = ramanSpectrum(
+        'St CLs',
+        ['St CL 0', 'St CL 7', 'St CL 14', 'St CL 21'],
         [
             [
                 "data/St CLs/St CL 0 Region 1.txt",
                 "data/St CLs/St CL 0 Region 2.txt"
             ],
             [
-                "data/St kC CLs/St kC CL 0 Region 1.txt",
-                "data/St kC CLs/St kC CL 0 Region 2.txt"
+                "data/St CLs/St CL 7 Region 1.txt",
+                "data/St CLs/St CL 7 Region 2.txt"
             ],
             [
-                "data/St iC CLs/St iC CL 0 Region 1.txt",
-                "data/St iC CLs/St iC CL 0 Region 2.txt"
+                "data/St CLs/St CL 14 Region 1.txt",
+                "data/St CLs/St CL 14 Region 2.txt"
+            ],
+            [
+                "data/St CLs/St CL 21 Region 1.txt",
+                "data/St CLs/St CL 21 Region 2.txt"
             ],
         ],
         (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
@@ -347,79 +211,60 @@ if __name__ == '__main__':
             # No CL
             '#E1C96B',
             # CL 7
-            'lightpink',
+            'gold',
             # CL 14
-            'lightskyblue',
+            '#F1A836',
+            # CL 28
+            '#E36E34',
         ],
         peaks,
         True, True, False, True)
 
-    st_cls_7 = ramanSpectrum(
-        'Blends CLs 7',
-        ['St CL 7', 'St kCar CL 7', 'St iCar CL 7',],
+    st_kc_cls = ramanSpectrum(
+        'St kCar CLs',
+        ['St kCar CL 0', 'St kCar CL 7', 'St kCar CL 14', 'St kCar CL 21'],
         [
             [
-                "data/St CLs/St CL 7 Region 1.txt",
-                "data/St CLs/St CL 7 Region 2.txt"
+                "data/St kC CLs/St kC CL 0 Region 1.txt",
+                "data/St kC CLs/St kC CL 0 Region 2.txt"
             ],
             [
                 "data/St kC CLs/St kC CL 7 Region 1.txt",
                 "data/St kC CLs/St kC CL 7 Region 2.txt"
             ],
             [
-                "data/St iC CLs/St iC CL 7 Region 1.txt",
-                "data/St iC CLs/St iC CL 7 Region 2.txt"
-            ],
-        ],
-        (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
-        [
-            'gold',
-            'hotpink',
-            '#62BDC1',
-        ],
-        peaks,
-        True, True, False, True)
-
-    st_cls_14 = ramanSpectrum(
-        'Blends CLs 14',
-        ['St CL 14', 'St kCar CL 14', 'St iCar CL 14',],
-        [
-            [
-                "data/St CLs/St CL 14 Region 1.txt",
-                "data/St CLs/St CL 14 Region 2.txt"
-            ],
-            [
                 "data/St kC CLs/St kC CL 14 Region 1.txt",
                 "data/St kC CLs/St kC CL 14 Region 2.txt"
             ],
             [
-                "data/St iC CLs/St iC CL 14 Region 1.txt",
-                "data/St iC CLs/St iC CL 14 Region 2.txt"
+                "data/St kC CLs/St kC CL 21 Region 1.txt",
+                "data/St kC CLs/St kC CL 21 Region 2.txt"
             ],
         ],
         (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
         [
-            # No CL
-            '#F1A836',
-            # CL 7
+            'lightpink',
+            'hotpink',
             'deeppink',
-            # CL 14
-            '#31A887',
-        ],
+            'crimson'],
         peaks,
         True, True, False, True)
 
-    st_cls_21 = ramanSpectrum(
-        'Blends CLs 21',
-        ['St CL 21', 'St kCar CL 21', 'St iCar CL 21',],
+    st_ic_cls = ramanSpectrum(
+        'St iCar CLs',
+        ['St iCar CL 0', 'St iCar CL 7', 'St iCar CL 14', 'St iCar CL 21'],
         [
             [
-                "data/St CLs/St CL 21 Region 1.txt",
-                "data/St CLs/St CL 21 Region 2.txt"
+                "data/St iC CLs/St iC CL 0 Region 1.txt",
+                "data/St iC CLs/St iC CL 0 Region 2.txt"
             ],
             [
-                "data/St kC CLs/St kC CL 21 Region 1.txt",
-                "data/St kC CLs/St kC CL 21 Region 2.txt"
+                "data/St iC CLs/St iC CL 7 Region 1.txt",
+                "data/St iC CLs/St iC CL 7 Region 2.txt"
+            ],
+            [
+                "data/St iC CLs/St iC CL 14 Region 1.txt",
+                "data/St iC CLs/St iC CL 14 Region 2.txt"
             ],
             [
                 "data/St iC CLs/St iC CL 21 Region 1.txt",
@@ -429,10 +274,12 @@ if __name__ == '__main__':
         (300, 1785),  # all spectrum: (200, 1800); ideal: (300, 1500)
         [
             # No CL
-            '#E36E34',
+            'lightskyblue',
             # CL 7
-            'crimson',
+            '#62BDC1',
             # CL 14
+            '#31A887',
+            # CL 28
             '#08653A',
         ],
         peaks,
