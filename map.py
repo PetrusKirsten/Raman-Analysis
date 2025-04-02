@@ -4,7 +4,36 @@ import ramanspy as rp
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
+from scipy.ndimage import median_filter
 
+
+def detect_outliers(data, threshold=3.5):
+
+    mean = np.mean(data)
+    std = np.std(data)
+    mask = np.abs(data - mean) > threshold * std  # Máscara de outliers
+
+    return mask
+
+
+def correct_outliers(array, method='median'):
+
+    mask_outliers = detect_outliers(array)
+    array_corrected = array.copy()
+
+    if method == 'median':
+        corrected_values = median_filter(array, size=3)  # Suaviza com filtro de mediana
+
+    elif method == 'mean':
+        from scipy.ndimage import uniform_filter
+        corrected_values = uniform_filter(array, size=3)  # Suaviza com média local
+
+    else:
+        raise ValueError("Método inválido. Escolha 'median' ou 'mean'.")
+
+    array_corrected[mask_outliers] = corrected_values[mask_outliers]
+
+    return array_corrected
 
 def ramanMicroscopy(
         fileTitle,
@@ -17,13 +46,16 @@ def ramanMicroscopy(
         plot_spectra,
         save
 ):
-    def configFigure(size, face='snow'):
+    def configFigure(size, face='snow', edge='#383838'):
+        dpi = 300
+        heigth, width = size[0] / dpi, size[1] / dpi
 
-        fig = plt.figure(figsize=size, facecolor=face)
+        fig = plt.figure(figsize=(heigth, width), facecolor=face, edgecolor='w')
         # fig.canvas.manager.set_window_title(fileTitle + f' - peaks distribution at {band}')
         gs = GridSpec(1, 1, width_ratios=[1], height_ratios=[1])
         ax = fig.add_subplot(gs[0, 0])
-        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(1)
+        ax.spines[['top', 'bottom', 'left', 'right']].set_edgecolor(edge)
 
         return ax
 
@@ -82,7 +114,7 @@ def ramanMicroscopy(
 
     def plotSpectra(img):
 
-        axSpec = configFigure((16, 5))
+        axSpec = configFigure((3500, 1100))
 
         c = 0
         for region in range(len(img)):
@@ -96,7 +128,7 @@ def ramanMicroscopy(
             img[region].mean.plot(
                 ax=axSpec, title='',
                 label=f'Region {region + 1} Mean',
-                color=f'silver', ls=':',
+                color=f'C{c}', ls=':',
                 alpha=.9, lw=1.)
 
             c += 1
@@ -146,31 +178,40 @@ def ramanMicroscopy(
 
         def showImage(
                 title,
-                gridData,
+                gridData, secondData,
                 colorMap
         ):
 
-            axMap = configFigure((9, 7), face='w')
-            plt.title(title)
+            axMap = configFigure((3150, 2450), '#1d1e24', 'w')
+            axMap.set_facecolor('#1d1e24')
+            plt.title(title, color='w', size=14)
 
             # TODO: try to merge some maps
             im = axMap.imshow(
                 gridData,
                 alpha=1.,
                 cmap=colorMap,
-                interpolation='gaussian', )
+                interpolation='none',
+            )
 
             cbar = plt.colorbar(im, ax=axMap, label='')
-            cbar.set_ticks([])
+            cbar.set_ticks([]), cbar.outline.set_edgecolor('w'), cbar.outline.set_linewidth(1)
 
             if plot_spectra:
                 axMap.plot(x, y, 'ro', markersize=2, zorder=2)
 
             axMap.tick_params(
+                colors='w',
                 axis='both', which='both',
-                left=False, labelleft=False,
-                bottom=False, labelbottom=False)
+                left=True, labelleft=True,
+                bottom=True, labelbottom=True)
+            axMap.set_xticks([0, 26, 51, 76, 99]), axMap.set_yticks([0, 26, 51, 76, 99])
+            axMap.set_xticklabels(['0', '25', '50', '75', '100']), axMap.set_yticklabels(['100', '75', '50', '25', '0'])
             plt.tight_layout()
+
+            if save:
+                plt.savefig(f'{title}' + '.png', facecolor='#1d1e24', dpi=300)
+
 
         for region in range(len(img)):
             for band, color in zip(peakBands, bandsColor):
@@ -183,34 +224,42 @@ def ramanMicroscopy(
 
                 # specific peak intensity
                 peak_intensity = dataArray[:, :, bandIndex]
-                showImage(
-                    f'{legend[region]} | Peak intensity at {band} cm$^{{-1}}$',
-                    peak_intensity,
-                    color)
+                # showImage(
+                #     f'{legend[region]} | Peak intensity at {band} cm$^{{-1}}$',
+                #     peak_intensity,
+                #     color)
 
                 # specific peak/band/region sum
                 negStep, posStep = wnIndex(wavenumbers, band - 10), wnIndex(wavenumbers, band + 10)
-                band_sum = np.sum(
-                    dataArray[:, :, negStep:posStep],
-                    axis=2)
+                band_sum = np.sum(dataArray[:, :, negStep:posStep], axis=2)
+                band_sum_corrected = correct_outliers(band_sum, method='median')
+
                 showImage(
-                    f'{legend[region]} | Band sum at {band} cm$^{{-1}}$',
-                    band_sum,
-                    color)
+                    f'{legend[region]} - Band sum at {band} cm$^{{-1}}$ corrected',
+                    band_sum_corrected, 0, color)
+
+                showImage(
+                    f'{legend[region]} - Band sum at {band} cm$^{{-1}}$',
+                    band_sum, 0, color)
 
                 # topography map / sum of the area along all wavenumbers
                 start, end = wnIndex(wavenumbers, regionToCrop[0]), wnIndex(wavenumbers, regionToCrop[-1])
                 topography = np.sum(dataArray[:, :, start:end], axis=2)
+                topography_corrected = correct_outliers(topography, method='median')
+
                 showImage(
-                    f'{legend[region]} | Topography.',
-                    topography,
-                    color)
+                    f'{legend[region]} - Topography',
+                    topography, None, color)
+
+                showImage(
+                    f'{legend[region]} - Topography outliers removed',
+                    topography_corrected, None, color)
 
                 # peak subtracted by the topography map
-                showImage(
-                    f'{legend[region]} | Band sum subtracted by topography.',
-                    band_sum - topography,
-                    color)
+                # showImage(
+                #     f'{legend[region]} | Band sum subtracted by topography.',
+                #     band_sum - topography,
+                #     color)
 
                 # array to determine transparency of the imagem based on a threshold on data
                 alphaArray = threshold(topography)
@@ -270,19 +319,20 @@ def ramanMicroscopy(
 
     plotMap(processed_map)
 
-    if save:
-        plt.savefig(f'{fileTitle}' + '.png', facecolor='snow', dpi=300)
+    # if save:
+    #     plt.savefig(f'{fileTitle}' + '.png', facecolor='snow', dpi=300)
 
     return processed_map
 
 
 if __name__ == '__main__':
+
     ramanMicroscopy(
         'St CLs',
         [
             # "data/Carrageenans/Map 5pct kC Region 1.txt",
-            # "data/Carrageenans/Map 5pct iC Region 1.txt",
-            "data/St CLs/Map St CL 0 Region 1.txt",
+            "data/Carrageenans/Map 5pct iC Region 1.txt",
+            # "data/St CLs/Map St CL 0 Region 1.txt",
             # "data/St CLs/Map St CL 0 Region 2.txt",
             # "data/St CLs/Map St CL 7 Region 1.txt",
             # "data/St CLs/Map St CL 7 Region 2.txt",
@@ -291,11 +341,11 @@ if __name__ == '__main__':
             # "data/St CLs/Map St CL 21 Region 1.txt",
             # "data/St CLs/Map St CL 21 Region 2.txt",
         ],
-        (300, 1500),  # all spectrum: (200, 1800); ideal: (300, 1500)
+        (200, 1800),  # all spectrum: (200, 1800); ideal: (300, 1500)
         [
             # '5pct kC Region 1',
-            # '5pct iC Region 1',
-            'St CL 0 Region I',
+            '5pct iC Region 1',
+            # 'St CL 0 Region I',
             # 'St CL 0 Region II',
             # 'St CL 7 Region I',
             # 'St CL 7 Region II',
@@ -304,8 +354,8 @@ if __name__ == '__main__':
             # 'St CL 21 Region I',
             # 'St CL 21 Region II',
         ],
-        [478],  # in wavenumber / Raman shift. Starch principal peak: 478 1/cm
-        ['Grays'],
-        False, False, False)
+        [805],  # in wavenumber / Raman shift. Starch principal peak: 478 1/cm
+        ['copper'],
+        False, True, False)
 
     plt.show()
