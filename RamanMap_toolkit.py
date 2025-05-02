@@ -302,11 +302,12 @@ if __name__ == "__main__":
 
     # Bands to plot
     bands_to_plot = [
-        (941, 10, "Starch Band 941 cm$^{-1}$", 'viridis'),
-        (805, 10, "Iota-Carrageenan 805 cm$^{-1}$", 'plasma'),
-        (850, 10, "Kappa-Carrageenan 850 cm$^{-1}$", 'magma'),
-        (550, 20, "Ca²⁺ Interactions 550 cm$^{-1}$", 'cividis'),
-        (1220, 10, "Kappa S=O 1220 cm$^{-1}$", 'inferno'),
+        # band, width, title, colormap
+        (941, 10, "Starch Band 941 cm$^{-1}$", 'bone'),
+        (805, 10, "Iota-Carrageenan 805 cm$^{-1}$", 'bone'),
+        (850, 10, "Kappa-Carrageenan 850 cm$^{-1}$", 'bone'),
+        (550, 20, "Ca^{2+}$ Interactions 550 cm$^{-1}$", 'bone'),
+        (1220, 10, "Kappa S=O 1220 cm$^{-1}$", 'bone'),
     ]
 
     # Loop to plot each band
