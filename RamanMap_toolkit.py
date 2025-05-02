@@ -19,6 +19,7 @@ from tqdm import tqdm                                    # progress bar
 import ramanspy as rp                                    # RamanSPy for spectral images and preprocessing
 import matplotlib.pyplot as plt                          # plotting
 from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 from matplotlib.gridspec import GridSpec                 # figure layout
 from scipy.ndimage import median_filter, uniform_filter  # outlier correction filters
 
@@ -117,7 +118,7 @@ def config_bar(colorbar) -> None:
 # Data Loading
 # --------------------------------------
 
-def load_raman_txt(path: str) -> rp.SpectralImage:
+def load_file(path: str) -> rp.SpectralImage:
     """
     Read a .txt Raman map and return a RamanSPy SpectralImage.
     """
@@ -139,9 +140,9 @@ def load_raman_txt(path: str) -> rp.SpectralImage:
 # Preprocessing Pipeline
 # --------------------------------------
 
-def preprocess_maps(maps: list,
-                    region: tuple,
-                    win_len: int) -> list:
+def preprocess(maps: list,
+               region: tuple,
+               win_len: int) -> list:
     """
     Crop, despike, smooth, and baseline-correct SpectralImage objects.
     """
@@ -187,10 +188,10 @@ def plot_topography(image: rp.SpectralImage,
 # Band Extraction and Visualization
 # --------------------------------------
 
-def extract_band_map(image: rp.SpectralImage,
-                     center: float,
-                     width: float = 10,
-                     method: str = 'median') -> np.ndarray:
+def extract_band(image: rp.SpectralImage,
+                 center: float,
+                 width: float = 10,
+                 method: str = 'median') -> np.ndarray:
     """
     Integrate intensity around a given Raman shift window.
     """
@@ -214,7 +215,7 @@ def plot_band(image: rp.SpectralImage,
     """
     fig_title = title or f"Band {center} cm$^{-1}$ Intensity"
     ax = config_figure(fig_title, figsize, face='#1D1E24', edge='white')
-    band_img = extract_band_map(image, center, width, method=method)
+    band_img = extract_band(image, center, width, method=method)
     if compensation == 'diff':
         topo = sum_intensity(image, method=method)
         diff = band_img - topo
@@ -248,7 +249,7 @@ def plot_multiband(image: rp.SpectralImage,
     """
 
     # 1) extrai cada canal
-    chan = [extract_band_map(image, c, w, method=method) for c, w in bands]
+    chan = [extract_band(image, c, w, method=method) for c, w in bands]
 
     # Se for modo 'diff', subtrai topografia de cada banda
     if compensation == 'diff':
@@ -299,10 +300,11 @@ def plot_multiband(image: rp.SpectralImage,
 # --------------------------------------
 # Multivariate Analysis: k-means Clustering
 # --------------------------------------
-def compute_kmeans_map(image: rp.SpectralImage,
-                       n_clusters: int = 4,
-                       method: str = 'median',
-                       compensation: str = 'raw') -> np.ndarray:
+
+def compute_kmeans(image: rp.SpectralImage,
+                   n_clusters: int = 4,
+                   method: str = 'median',
+                   compensation: str = 'raw') -> np.ndarray:
     """
     Aplica k-means aos espectros de cada pixel e retorna
     um mapa 2D com rótulos de cluster.
@@ -325,7 +327,7 @@ def compute_kmeans_map(image: rp.SpectralImage,
         topo = sum_intensity(image, method=method)
 
     for center, width in BANDS_FOR_CLUSTER:
-        band_map = extract_band_map(image, center, width, method=method)
+        band_map = extract_band(image, center, width, method=method)
 
         if compensation == 'diff':
             # subtrai topo e normaliza diferença
@@ -356,9 +358,9 @@ def compute_kmeans_map(image: rp.SpectralImage,
 
     return labels
 
-def plot_cluster_map(labels: np.ndarray,
-                     figsize: tuple = (2500, 2500),
-                     cmap: str = 'tab10') -> None:
+def plot_cluster(labels: np.ndarray,
+                 figsize: tuple = (2500, 2500),
+                 cmap: str = 'tab10') -> None:
     """
     Plota o mapa de clusters como imagem discreta.
     """
@@ -370,8 +372,51 @@ def plot_cluster_map(labels: np.ndarray,
 
 
 # --------------------------------------
+# Multivariate Analysis: PCA
+# --------------------------------------
+def compute_pca(image: rp.SpectralImage,
+                n_components: int = 3,
+                method: str = 'median') -> np.ndarray:
+    """
+    Executa PCA nos espectros de cada pixel.
+    Retorna um array (h, w, n_components) com os scores.
+    """
+
+    # 1) extrair cubo h×w×n_shifts e remodelar em (n_pixels, n_shifts)
+    h, w, n_shifts = image.spectral_data.shape
+    data = image.spectral_data.reshape(-1, n_shifts)
+
+    # 2) opcional: normalizar espectros pelo total (tal como no k-means diff)
+    if method == 'diff':
+        topo = data.sum(axis=1, keepdims=True)
+        data = data / (topo + 1e-6)
+
+    # 3) rodar o PCA
+    pca = PCA(n_components=n_components, random_state=0)
+    scores = pca.fit_transform(data)  # shape (n_pixels, n_components)
+
+    # 4) remodelar de volta para (h, w, n_components)
+    return scores.reshape(h, w, n_components)
+
+
+def plot_pca(score_map: np.ndarray,
+             component: int = 1,
+             figsize: tuple = (2500, 2500),
+             cmap: str = 'RdBu_r') -> None:
+    """
+    Plota o mapa de scores de um componente principal.
+    """
+    ax = config_figure(f"PCA Component {component}", figsize, face='#1d1e24', edge='white')
+    im = ax.imshow(score_map, cmap=cmap, origin='lower')
+    cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    config_bar(cbar)
+    plt.tight_layout()
+
+
+# --------------------------------------
 # Main Execution
 # --------------------------------------
+
 if __name__ == "__main__":
 
     def showBands():
@@ -418,22 +463,33 @@ if __name__ == "__main__":
     def showCluster():
 
         logger.info("Computing k-means clustering...")
-        labels = compute_kmeans_map(processed_map,
-                                    n_clusters=4,
-                                    method='median',
-                                    compensation='diff')
-        plot_cluster_map(labels, figsize=(2500, 2500), cmap='Set1')
+        labels = compute_kmeans(processed_map,
+                                n_clusters=4,
+                                method='median',
+                                compensation='diff')
+        plot_cluster(labels, figsize=(2500, 2500), cmap='Set1')
+
+    def showPCA():
+
+        logger.info("Computing PCA scores...")
+        pca_scores = compute_pca(processed_map, n_components=3, method='diff')
+
+        # Plota cada componente
+        for i in range(pca_scores.shape[2]):
+            plot_pca(pca_scores[:, :, i], component=i + 1, figsize=(2500, 2500), cmap='RdBu_r')
+
 
     file_path = "data/St kC CLs/Map St kC CL 14 Region 2.txt"
 
     logger.info("Loading data...")
-    raw_map = load_raman_txt(file_path)
+    raw_map = load_file(file_path)
 
     logger.info("Preprocessing maps...")
-    processed_map = preprocess_maps([raw_map], region=(250, 1800), win_len=15)[0]
+    processed_map = preprocess([raw_map], region=(250, 1800), win_len=15)[0]
 
     # showBands()
     # showMultibands()
-    showCluster()
+    # showCluster()
+    showPCA()
 
     plt.show()
