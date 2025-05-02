@@ -10,17 +10,20 @@ Includes logging and progress bars for efficient console feedback.
 # --------------------------------------
 # Imports
 # --------------------------------------
-import re                     # regex for parsing column names
-import numpy as np            # numerical operations
-import pandas as pd           # data handling
-import ramanspy as rp         # RamanSPy for spectral images and preprocessing
-import matplotlib.pyplot as plt  # plotting
-from matplotlib.gridspec import GridSpec  # figure layout
+import os
+import re                                                # regex for parsing column names
+import logging                                           # logging and progress bar
+import numpy as np                                       # numerical operations
+import pandas as pd                                      # data handling
+from tqdm import tqdm                                    # progress bar
+import ramanspy as rp                                    # RamanSPy for spectral images and preprocessing
+import matplotlib.pyplot as plt                          # plotting
+from sklearn.cluster import KMeans
+from matplotlib.gridspec import GridSpec                 # figure layout
 from scipy.ndimage import median_filter, uniform_filter  # outlier correction filters
 
-# logging and progress bar
-import logging
-from tqdm import tqdm  # progress bar
+# limite o loky a usar 1 core físico (pode ajustar para o nº de cores que você tem)
+os.environ["LOKY_MAX_CPU_COUNT"] = "1"
 
 # --------------------------------------
 # Logging Configuration
@@ -292,6 +295,80 @@ def plot_multiband(image: rp.SpectralImage,
     plt.axis('off')
     plt.tight_layout()
 
+
+# --------------------------------------
+# Multivariate Analysis: k-means Clustering
+# --------------------------------------
+def compute_kmeans_map(image: rp.SpectralImage,
+                       n_clusters: int = 4,
+                       method: str = 'median',
+                       compensation: str = 'raw') -> np.ndarray:
+    """
+    Aplica k-means aos espectros de cada pixel e retorna
+    um mapa 2D com rótulos de cluster.
+    """
+
+    # Bandas químicas para clustering
+    BANDS_FOR_CLUSTER = [
+        (478, 10),  # amido
+        (850, 10),  # κ-carragenana
+        (1220, 10),  # S=O de carragenana
+        (550, 20),  # interações Ca2+
+    ]
+
+    # 1) extrai features químicas: banda normalizada ou compensada
+    h, w, _ = image.spectral_data.shape
+    features = []
+    topo = None
+    if compensation == 'diff':
+        # só calcula topo uma vez
+        topo = sum_intensity(image, method=method)
+
+    for center, width in BANDS_FOR_CLUSTER:
+        band_map = extract_band_map(image, center, width, method=method)
+
+        if compensation == 'diff':
+            # subtrai topo e normaliza diferença
+            diff = band_map - topo
+
+            from scipy.ndimage import gaussian_filter
+            smooth = gaussian_filter(diff, sigma=0.9)
+            clipped = np.clip(smooth, -0.1, +0.1)
+            feat = normalize(clipped)
+
+        else:
+            feat = band_map
+
+        features.append(feat.flatten())
+
+    # 2) empilha as colunas: shape (h*w, n_bands)
+    data = np.stack(features, axis=1)
+
+    # 2) compensação opcional: normaliza cada espectro pela intensidade total
+    if compensation == 'diff':
+        total = data.sum(axis=1, keepdims=True)
+        # evita divisão por zero
+        data = data / (total + 1e-6)
+
+    # 3) roda o k-means
+    kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(data)
+    labels = kmeans.labels_.reshape(h, w)
+
+    return labels
+
+def plot_cluster_map(labels: np.ndarray,
+                     figsize: tuple = (2500, 2500),
+                     cmap: str = 'tab10') -> None:
+    """
+    Plota o mapa de clusters como imagem discreta.
+    """
+    ax = config_figure("Cluster Map", figsize, face='#1d1e24', edge='white')
+    im = ax.imshow(labels, cmap=cmap, origin='lower')
+
+    plt.axis('off')
+    plt.tight_layout()
+
+
 # --------------------------------------
 # Main Execution
 # --------------------------------------
@@ -338,6 +415,15 @@ if __name__ == "__main__":
             compensation='raw'
         )
 
+    def showCluster():
+
+        logger.info("Computing k-means clustering...")
+        labels = compute_kmeans_map(processed_map,
+                                    n_clusters=4,
+                                    method='median',
+                                    compensation='diff')
+        plot_cluster_map(labels, figsize=(2500, 2500), cmap='Set1')
+
     file_path = "data/St kC CLs/Map St kC CL 14 Region 2.txt"
 
     logger.info("Loading data...")
@@ -346,7 +432,8 @@ if __name__ == "__main__":
     logger.info("Preprocessing maps...")
     processed_map = preprocess_maps([raw_map], region=(250, 1800), win_len=15)[0]
 
-    showBands()
-    showMultibands()
+    # showBands()
+    # showMultibands()
+    showCluster()
 
     plt.show()
