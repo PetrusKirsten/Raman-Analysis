@@ -12,10 +12,8 @@ Includes logging and progress bars for efficient console feedback.
 # --------------------------------------
 import os
 import re                                                # regex for parsing column names
-import logging                                           # logging and progress bar
 import numpy as np                                       # numerical operations
 import pandas as pd                                      # data handling
-from tqdm import tqdm                                    # progress bar
 import ramanspy as rp                                    # RamanSPy for spectral images and preprocessing
 import matplotlib.pyplot as plt                          # plotting
 from sklearn.cluster import KMeans
@@ -25,16 +23,6 @@ from scipy.ndimage import median_filter, uniform_filter  # outlier correction fi
 
 # limite o loky a usar 1 core físico (pode ajustar para o nº de cores que você tem)
 os.environ["LOKY_MAX_CPU_COUNT"] = "1"
-
-# --------------------------------------
-# Logging Configuration
-# --------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s: %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger(__name__)
 
 # --------------------------------------
 # Utility Functions
@@ -47,7 +35,7 @@ def normalize(array: np.ndarray) -> np.ndarray:
     return (array - np.min(array)) / (np.max(array) - np.min(array))
 
 
-def detect_outliers(data: np.ndarray, threshold: float = 3) -> np.ndarray:
+def detect_outliers(data: np.ndarray, threshold: float = 1.5) -> np.ndarray:
     """
     Identify outliers via Z-score thresholding.
     """
@@ -425,82 +413,4 @@ def plot_pca(score_map: np.ndarray,
 # --------------------------------------
 
 if __name__ == "__main__":
-
-    def showTopography():
-        plot_topography(processed_map, title="Total Raman Intensity")
-
-    def showBands():
-
-        # Bands to plot: (center, width, title, cmap, compensation)
-        bands_to_plot = [
-            (941, 10, "Starch Band 941 cm$^{-1}$", 'bone', 'diff'),
-        ]
-        # Loop with progress bar
-        for center, width, title, cmap, comp in tqdm(
-                bands_to_plot, desc="Plotting bands", unit="band"):
-            logger.info(f"{title} ({comp})...")
-
-            plot_band(
-                processed_map,
-                center=center,
-                width=width,
-                title=title,
-                cmap=cmap,
-                method='median',
-                compensation=comp
-            )
-
-    def showMultibands():
-
-        logger.info("Plotting multiband map...")
-        plot_multiband(
-            processed_map,
-            bands=[(941, 10), (850, 10)],
-            colors=[(1, 1, 0), (0, 0, 1)],
-            method='median',
-            compensation='diff'
-        )
-
-        logger.info("Plotting multiband map...")
-        plot_multiband(
-            processed_map,
-            bands=[(941, 10), (850, 10)],
-            colors=[(1, 1, 0), (0, 0, 1)],
-            method='median',
-            compensation='raw'
-        )
-
-    def showCluster():
-
-        logger.info("Computing k-means clustering...")
-        labels = compute_kmeans(processed_map,
-                                n_clusters=4,
-                                method='median',
-                                compensation='diff')
-        plot_cluster(labels, figsize=(2500, 2500), cmap='Set1')
-
-    def showPCA():
-
-        logger.info("Computing PCA scores...")
-        pca_scores = compute_pca(processed_map, n_components=3, method='diff')
-
-        # Plota cada componente
-        for i in range(pca_scores.shape[2]):
-            plot_pca(pca_scores[:, :, i], component=i + 1, figsize=(2500, 2500), cmap='RdBu_r')
-
-
-    file_path = "data/St CLs/Map St CL 0 Region 1.txt"
-
-    logger.info("Loading data...")
-    raw_map = load_file(file_path)
-
-    logger.info("Preprocessing maps...")
-    processed_map = preprocess([raw_map], region=(250, 1800), win_len=15)[0]
-
-    showTopography()
-    # showBands()
-    # showMultibands()
-    # showCluster()
-    # showPCA()
-
-    plt.show()
+    print('Run in __main__')
