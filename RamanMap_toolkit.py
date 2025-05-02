@@ -93,14 +93,17 @@ def config_figure(fig_title: str,
     """
     dpi = 300
     height, width = size[0] / dpi, size[1] / dpi
+
     fig = plt.figure(figsize=(height, width), facecolor=face, edgecolor='w')
     ax = fig.add_subplot(GridSpec(1, 1)[0])
-    ax.invert_yaxis()
+
     ax.set_title(fig_title, color='w')
     ax.tick_params(colors='w')
     ax.set_facecolor(face)
+
     ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(1)
     ax.spines[['top', 'bottom', 'left', 'right']].set_edgecolor(edge)
+
     return ax
 
 
@@ -150,7 +153,7 @@ def preprocess(maps: list,
         rp.preprocessing.misc.Cropper(region=region),
         rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
         rp.preprocessing.denoise.SavGol(window_length=win_len, polyorder=3),
-        rp.preprocessing.baseline.ASLS(),
+        # rp.preprocessing.baseline.ASLS(),
     ])
     return [routine.apply(m) for m in maps]
 
@@ -166,6 +169,7 @@ def sum_intensity(image: rp.SpectralImage,
     """
     total = np.sum(image.spectral_data, axis=2)
     total = correct_outliers(total, method=method)
+
     return normalize(total)
 
 
@@ -175,13 +179,16 @@ def plot_topography(image: rp.SpectralImage,
     Display the total intensity map with styled colorbar.
     """
     plt.style.use('seaborn-v0_8-ticks')
+
     ax = config_figure(title, (2500, 2500), face='#1d1e24', edge='white')
+    # ax.invert_yaxis()
     img = sum_intensity(image)
-    im = ax.imshow(img, cmap='inferno', origin='lower')
+
+    im = ax.imshow(img, cmap='bone', origin='upper', interpolation='none')
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     config_bar(cbar)
+
     plt.tight_layout()
-    plt.show()
 
 
 # --------------------------------------
@@ -419,6 +426,9 @@ def plot_pca(score_map: np.ndarray,
 
 if __name__ == "__main__":
 
+    def showTopography():
+        plot_topography(processed_map, title="Total Raman Intensity")
+
     def showBands():
 
         # Bands to plot: (center, width, title, cmap, compensation)
@@ -479,7 +489,7 @@ if __name__ == "__main__":
             plot_pca(pca_scores[:, :, i], component=i + 1, figsize=(2500, 2500), cmap='RdBu_r')
 
 
-    file_path = "data/St kC CLs/Map St kC CL 14 Region 2.txt"
+    file_path = "data/St CLs/Map St CL 0 Region 1.txt"
 
     logger.info("Loading data...")
     raw_map = load_file(file_path)
@@ -487,9 +497,10 @@ if __name__ == "__main__":
     logger.info("Preprocessing maps...")
     processed_map = preprocess([raw_map], region=(250, 1800), win_len=15)[0]
 
+    showTopography()
     # showBands()
     # showMultibands()
     # showCluster()
-    showPCA()
+    # showPCA()
 
     plt.show()
