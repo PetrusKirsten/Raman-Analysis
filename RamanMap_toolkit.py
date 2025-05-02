@@ -6,12 +6,15 @@ Modular Python pipeline for processing and visualizing Raman spectral maps.
 Uses RamanSPy for preprocessing and spectral image handling.
 """
 
+import re
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import re
-from scipy.ndimage import median_filter, uniform_filter
 import ramanspy as rp
+import matplotlib.pyplot as plt
+
+from matplotlib.gridspec import GridSpec
+from scipy.ndimage import median_filter, uniform_filter
+
 
 # --- Utility Functions ---
 
@@ -75,8 +78,45 @@ def parse_coordinates(column_names: list) -> list:
     :rtype: list
     """
     coords = [re.search(r"\((\d+)/(\d+)\)", name) for name in column_names]
-    parsed = [(int(c.group(1)), int(c.group(2))) for c in coords if c]
-    return parsed
+    return [(int(c.group(1)), int(c.group(2))) for c in coords if c]
+
+def config_figure(fig_title: str, size: tuple, face: str = 'white', edge: str = '#383838') -> plt.Axes:
+    """
+    Configure a standard matplotlib figure.
+
+    :param fig_title: Title of the map
+    :param size: Size in pixels (width, height).
+    :type size: tuple
+    :param face: Background color.
+    :type face: str
+    :param edge: Edge color of axes.
+    :type edge: str
+    :return: Matplotlib axis object.
+    :rtype: plt.Axes
+    """
+    dpi = 300
+    height, width = size[0] / dpi, size[1] / dpi
+
+    fig = plt.figure(figsize=(height, width), facecolor=face, edgecolor='w')
+    ax = fig.add_subplot(GridSpec(1, 1)[0])
+
+    ax.set_title(fig_title, color='w')
+    ax.tick_params(colors='w')
+    ax.set_facecolor(face)
+
+    ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(1)
+    ax.spines[['top', 'bottom', 'left', 'right']].set_edgecolor(edge)
+
+    ax.invert_yaxis()
+
+    return ax
+
+def config_bar(colorbar) -> None:
+    colorbar.ax.yaxis.set_tick_params(color='w')
+    colorbar.ax.tick_params(colors='w')
+    colorbar.outline.set_edgecolor('w')
+    colorbar.set_label('Intensity', color='w')
+
 
 # --- Raman Data Loader ---
 
@@ -107,6 +147,7 @@ def load_raman_txt(file_path: str) -> rp.SpectralImage:
 
     return rp.SpectralImage(data_cube, raman_shift)
 
+
 # --- Raman Preprocessing ---
 
 def preprocess_maps(maps: list, region: tuple, win_len: int) -> list:
@@ -130,9 +171,10 @@ def preprocess_maps(maps: list, region: tuple, win_len: int) -> list:
     ])
     return [routine.apply(m) if m is not None else None for m in maps]
 
+
 # --- Raman Map Visualizer ---
 
-def plot_raman_map(image: rp.SpectralImage, title: str = "Raman Map - Total Intensity") -> None:
+def plot_raman_map(image: rp.SpectralImage, title: str = "Raman Map") -> None:
     """
     Plot 2D image of total Raman intensity per pixel.
 
@@ -141,17 +183,40 @@ def plot_raman_map(image: rp.SpectralImage, title: str = "Raman Map - Total Inte
     :param title: Plot title.
     :type title: str
     """
-    total = np.sum(image.spectral_data, axis=2)
-    total = normalize(correct_outliers(total))
 
-    plt.figure(figsize=(8, 6))
-    plt.imshow(total, cmap='inferno')
-    plt.title(title)
-    plt.colorbar(label='Intensity (a.u.)')
-    plt.xlabel('X')
-    plt.ylabel('Y')
+    plt.style.use('seaborn-v0_8-ticks')
+
+    ax = config_figure(title, (2500, 2500), face='#1d1e24', edge='white')
+
+    img = sum_intensity_map(image)
+
+    im = ax.imshow(img, cmap='inferno', origin='lower')
+
+    cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    config_bar(cbar)
+
     plt.tight_layout()
     plt.show()
+
+
+# --- Intensity Mapping ---
+
+def sum_intensity_map(image: rp.SpectralImage, method: str = 'median') -> np.ndarray:
+    """
+    Compute total intensity map by summing all shifts.
+
+    :param image: SpectralImage.
+    :type image: rp.SpectralImage
+    :param method: Outlier correction method.
+    :type method: str
+    :return: 2D intensity image.
+    :rtype: np.ndarray
+    """
+    total = np.sum(image.spectral_data, axis=2)
+    total = correct_outliers(total, method=method)
+    return normalize(total)
+
 
 # --- Band Selection Utility ---
 
@@ -173,3 +238,18 @@ def extract_band_map(image: rp.SpectralImage, center: float, width: float = 10) 
     max_idx = np.argmin(np.abs(shift - (center + width)))
     band_image = np.sum(image.spectral_data[:, :, min_idx:max_idx + 1], axis=2)
     return normalize(correct_outliers(band_image))
+
+
+# --- Main Example Execution ---
+
+if __name__ == "__main__":
+    # Load raw map
+    file_path = "data/St kC CLs/Map St kC CL 14 Region 2.txt"
+    raw_map = load_raman_txt(file_path)
+
+    # Preprocess the map
+    processed_maps = preprocess_maps([raw_map], region=(250, 1800), win_len=15)
+    processed_map = processed_maps[0]
+
+    # Plot total intensity map
+    plot_raman_map(processed_map, title="Total Raman Intensity")
