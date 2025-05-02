@@ -19,4 +19,4 @@ if __name__ == "__main__":
     processed_map = processed_maps[0]
 
     # Plot total intensity map
-    rm.plot_raman_map(processed_map, title="Total Raman Intensity – Preprocessed")
+    rm.plot_topography(processed_map, title="Total Raman Intensity – Preprocessed")

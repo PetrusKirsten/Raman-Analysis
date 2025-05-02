@@ -15,7 +15,6 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from scipy.ndimage import median_filter, uniform_filter
 
-
 # --- Utility Functions ---
 
 def normalize(array: np.ndarray) -> np.ndarray:
@@ -84,7 +83,8 @@ def config_figure(fig_title: str, size: tuple, face: str = 'white', edge: str = 
     """
     Configure a standard matplotlib figure.
 
-    :param fig_title: Title of the map
+    :param fig_title: Title of the map.
+    :type fig_title: str
     :param size: Size in pixels (width, height).
     :type size: tuple
     :param face: Background color.
@@ -99,6 +99,7 @@ def config_figure(fig_title: str, size: tuple, face: str = 'white', edge: str = 
 
     fig = plt.figure(figsize=(height, width), facecolor=face, edgecolor='w')
     ax = fig.add_subplot(GridSpec(1, 1)[0])
+    ax.invert_yaxis()
 
     ax.set_title(fig_title, color='w')
     ax.tick_params(colors='w')
@@ -107,11 +108,15 @@ def config_figure(fig_title: str, size: tuple, face: str = 'white', edge: str = 
     ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(1)
     ax.spines[['top', 'bottom', 'left', 'right']].set_edgecolor(edge)
 
-    ax.invert_yaxis()
-
     return ax
 
 def config_bar(colorbar) -> None:
+    """
+    Configure colorbar styling.
+
+    :param colorbar: Matplotlib colorbar object.
+    :type colorbar: matplotlib.colorbar.Colorbar
+    """
     colorbar.ax.yaxis.set_tick_params(color='w')
     colorbar.ax.tick_params(colors='w')
     colorbar.outline.set_edgecolor('w')
@@ -119,17 +124,16 @@ def config_bar(colorbar) -> None:
 
 
 # --- Raman Data Loader ---
-
-def load_raman_txt(file_path: str) -> rp.SpectralImage:
+def load_raman_txt(path: str) -> rp.SpectralImage:
     """
     Load Raman spectral map from .txt file as a RamanSPy SpectralImage.
 
-    :param file_path: Path to .txt file.
-    :type file_path: str
+    :param path: Path to .txt file.
+    :type path: str
     :return: SpectralImage containing Raman map.
     :rtype: rp.SpectralImage
     """
-    df = pd.read_csv(file_path, sep=',', encoding='utf-8')
+    df = pd.read_csv(path, sep=',', encoding='utf-8')
     raman_shift = df.iloc[:, 0].values
     spectra_columns = df.columns[1:]
     xy = parse_coordinates(spectra_columns)
@@ -137,8 +141,8 @@ def load_raman_txt(file_path: str) -> rp.SpectralImage:
     if not xy:
         raise ValueError("No (x/y) coordinates were found. Please check the file delimiter and the format of the column names.")
 
-    max_x = max([x for x, y in xy]) + 1
-    max_y = max([y for x, y in xy]) + 1
+    max_x = max(x for x, y in xy) + 1
+    max_y = max(y for x, y in xy) + 1
     data_cube = np.zeros((max_y, max_x, len(raman_shift)))
 
     for i, (x, y) in enumerate(xy):
@@ -149,7 +153,6 @@ def load_raman_txt(file_path: str) -> rp.SpectralImage:
 
 
 # --- Raman Preprocessing ---
-
 def preprocess_maps(maps: list, region: tuple, win_len: int) -> list:
     """
     Apply preprocessing pipeline to a list of SpectralImage objects.
@@ -172,9 +175,24 @@ def preprocess_maps(maps: list, region: tuple, win_len: int) -> list:
     return [routine.apply(m) if m is not None else None for m in maps]
 
 
-# --- Raman Map Visualizer ---
+# --- Intensity Mapping ---
+def sum_intensity_map(image: rp.SpectralImage, method: str = 'median') -> np.ndarray:
+    """
+    Compute total intensity map by summing all shifts.
 
-def plot_raman_map(image: rp.SpectralImage, title: str = "Raman Map") -> None:
+    :param image: SpectralImage.
+    :type image: rp.SpectralImage
+    :param method: Outlier correction method.
+    :type method: str
+    :return: 2D intensity image.
+    :rtype: np.ndarray
+    """
+    total = np.sum(image.spectral_data, axis=2)
+    total = correct_outliers(total, method=method)
+    return normalize(total)
+
+# --- Raman Map Topography ---
+def plot_topography(image: rp.SpectralImage, title: str = "Raman Map - Total Intensity") -> None:
     """
     Plot 2D image of total Raman intensity per pixel.
 
@@ -183,7 +201,6 @@ def plot_raman_map(image: rp.SpectralImage, title: str = "Raman Map") -> None:
     :param title: Plot title.
     :type title: str
     """
-
     plt.style.use('seaborn-v0_8-ticks')
 
     ax = config_figure(title, (2500, 2500), face='#1d1e24', edge='white')
@@ -200,27 +217,12 @@ def plot_raman_map(image: rp.SpectralImage, title: str = "Raman Map") -> None:
     plt.show()
 
 
-# --- Intensity Mapping ---
-
-def sum_intensity_map(image: rp.SpectralImage, method: str = 'median') -> np.ndarray:
-    """
-    Compute total intensity map by summing all shifts.
-
-    :param image: SpectralImage.
-    :type image: rp.SpectralImage
-    :param method: Outlier correction method.
-    :type method: str
-    :return: 2D intensity image.
-    :rtype: np.ndarray
-    """
-    total = np.sum(image.spectral_data, axis=2)
-    total = correct_outliers(total, method=method)
-    return normalize(total)
-
-
 # --- Band Selection Utility ---
+def extract_band_map(image: rp.SpectralImage,
+                     center: float,
+                     width: float = 10,
+                     method: str = 'median') -> np.ndarray:
 
-def extract_band_map(image: rp.SpectralImage, center: float, width: float = 10) -> np.ndarray:
     """
     Integrate intensity around a specific Raman band.
 
@@ -233,16 +235,60 @@ def extract_band_map(image: rp.SpectralImage, center: float, width: float = 10) 
     :return: 2D image of band intensity.
     :rtype: np.ndarray
     """
+
     shift = image.spectral_axis
+
     min_idx = np.argmin(np.abs(shift - (center - width)))
     max_idx = np.argmin(np.abs(shift - (center + width)))
-    band_image = np.sum(image.spectral_data[:, :, min_idx:max_idx + 1], axis=2)
-    return normalize(correct_outliers(band_image))
 
+    band_image = np.sum(image.spectral_data[:, :, min_idx:max_idx + 1], axis=2)
+    band_image = correct_outliers(band_image, method=method)
+
+    return normalize(band_image)
+
+# --- Raman Map Band ---
+def plot_band(image: rp.SpectralImage,
+              center: float,
+              width: float = 10,
+              title: str = None,
+              figsize: tuple = (2500, 2500),
+              cmap: str = 'inferno',
+              method: str = 'median'):
+    """
+    Plot a 2D Raman band intensity map.
+
+    :param image: SpectralImage object.
+    :type image: rp.SpectralImage
+    :param center: Center wavenumber of the band.
+    :type center: float
+    :param width: ± range around center to integrate.
+    :type width: float
+    :param title: Plot title. If None, uses f\"Band {center} cm⁻¹\".
+    :type title: str
+    :param figsize: Figure size in pixels (width, height).
+    :type figsize: tuple
+    :param cmap: Colormap name.
+    :type cmap: str
+    :param method: Outlier correction method ('median' or 'mean').
+    :type method: str
+    """
+
+    band_img = extract_band_map(image, center, width, method=method)
+
+    fig_title = title or f"Band {center} cm$^{-1}$ Intensity"
+
+    ax = config_figure(fig_title, figsize, face='#1d1e24', edge='white')
+    im = ax.imshow(band_img, cmap=cmap, origin='lower')
+
+    cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    config_bar(cbar)
+
+    plt.tight_layout()
+    plt.show()
 
 # --- Main Example Execution ---
-
 if __name__ == "__main__":
+
     # Load raw map
     file_path = "data/St kC CLs/Map St kC CL 14 Region 2.txt"
     raw_map = load_raman_txt(file_path)
@@ -252,4 +298,23 @@ if __name__ == "__main__":
     processed_map = processed_maps[0]
 
     # Plot total intensity map
-    plot_raman_map(processed_map, title="Total Raman Intensity")
+    plot_topography(processed_map, title="Total Raman Intensity")
+
+    # Bands to plot
+    bands_to_plot = [
+        (941, 10, "Starch Band 941 cm$^{-1}$", 'viridis'),
+        (805, 10, "Iota-Carrageenan 805 cm$^{-1}$", 'plasma'),
+        (850, 10, "Kappa-Carrageenan 850 cm$^{-1}$", 'magma'),
+        (550, 20, "Ca²⁺ Interactions 550 cm$^{-1}$", 'cividis'),
+        (1220, 10, "Kappa S=O 1220 cm$^{-1}$", 'inferno'),
+    ]
+
+    # Loop to plot each band
+    for center, width, title, cmap in bands_to_plot:
+        plot_band(
+            processed_map,
+            center=center,
+            width=width,
+            title=title,
+            cmap=cmap,
+            method='median')
