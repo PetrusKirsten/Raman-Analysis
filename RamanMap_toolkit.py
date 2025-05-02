@@ -3,8 +3,7 @@ Raman Microscopy Analysis Toolkit
 ===============================
 
 Modular Python pipeline for processing and visualizing Raman spectral maps.
-This version is optimized for 2D Raman image creation using bands of interest
-and topographic intensity distribution. Designed to be reusable and clean.
+Uses RamanSPy for preprocessing and spectral image handling.
 """
 
 import numpy as np
@@ -12,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import re
 from scipy.ndimage import median_filter, uniform_filter
+import ramanspy as rp
 
 # --- Utility Functions ---
 
@@ -80,14 +80,14 @@ def parse_coordinates(column_names: list) -> list:
 
 # --- Raman Data Loader ---
 
-def load_raman_txt(file_path: str) -> tuple:
+def load_raman_txt(file_path: str) -> rp.SpectralImage:
     """
-    Load Raman spectral map from .txt file into a 3D array.
+    Load Raman spectral map from .txt file as a RamanSPy SpectralImage.
 
     :param file_path: Path to .txt file.
     :type file_path: str
-    :return: Tuple of (data_cube, raman_shift)
-    :rtype: tuple
+    :return: SpectralImage containing Raman map.
+    :rtype: rp.SpectralImage
     """
     df = pd.read_csv(file_path, sep=',', encoding='utf-8')
     raman_shift = df.iloc[:, 0].values
@@ -105,24 +105,47 @@ def load_raman_txt(file_path: str) -> tuple:
         spectrum = df.iloc[:, i + 1].values
         data_cube[y, x, :] = spectrum
 
-    return data_cube, raman_shift
+    return rp.SpectralImage(data_cube, raman_shift)
+
+# --- Raman Preprocessing ---
+
+def preprocess_maps(maps: list, region: tuple, win_len: int) -> list:
+    """
+    Apply preprocessing pipeline to a list of SpectralImage objects.
+
+    :param maps: List of SpectralImage objects.
+    :type maps: list
+    :param region: Cropping region (start, end) in wavenumbers.
+    :type region: tuple
+    :param win_len: Window length for Savitzky-Golay smoothing.
+    :type win_len: int
+    :return: List of preprocessed SpectralImage objects.
+    :rtype: list
+    """
+    routine = rp.preprocessing.Pipeline([
+        rp.preprocessing.misc.Cropper(region=region),
+        rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
+        rp.preprocessing.denoise.SavGol(window_length=win_len, polyorder=3),
+        rp.preprocessing.baseline.ASLS(),
+    ])
+    return [routine.apply(m) if m is not None else None for m in maps]
 
 # --- Raman Map Visualizer ---
 
-def plot_raman_map(data_cube: np.ndarray, title: str = "Raman Map - Total Intensity") -> None:
+def plot_raman_map(image: rp.SpectralImage, title: str = "Raman Map - Total Intensity") -> None:
     """
     Plot 2D image of total Raman intensity per pixel.
 
-    :param data_cube: 3D array [y, x, spectrum].
-    :type data_cube: np.ndarray
+    :param image: SpectralImage object.
+    :type image: rp.SpectralImage
     :param title: Plot title.
     :type title: str
     """
-    sum_image = np.sum(data_cube, axis=2)
-    sum_image = normalize(correct_outliers(sum_image))
+    total = np.sum(image.spectral_data, axis=2)
+    total = normalize(correct_outliers(total))
 
     plt.figure(figsize=(8, 6))
-    plt.imshow(sum_image, cmap='inferno')
+    plt.imshow(total, cmap='inferno')
     plt.title(title)
     plt.colorbar(label='Intensity (a.u.)')
     plt.xlabel('X')
@@ -132,14 +155,12 @@ def plot_raman_map(data_cube: np.ndarray, title: str = "Raman Map - Total Intens
 
 # --- Band Selection Utility ---
 
-def extract_band_map(data_cube: np.ndarray, raman_shift: np.ndarray, center: float, width: float = 10) -> np.ndarray:
+def extract_band_map(image: rp.SpectralImage, center: float, width: float = 10) -> np.ndarray:
     """
     Integrate intensity around a specific Raman band.
 
-    :param data_cube: 3D spectral map.
-    :type data_cube: np.ndarray
-    :param raman_shift: Spectral axis.
-    :type raman_shift: np.ndarray
+    :param image: SpectralImage object.
+    :type image: rp.SpectralImage
     :param center: Central wavenumber.
     :type center: float
     :param width: +/- range around center.
@@ -147,7 +168,8 @@ def extract_band_map(data_cube: np.ndarray, raman_shift: np.ndarray, center: flo
     :return: 2D image of band intensity.
     :rtype: np.ndarray
     """
-    min_idx = np.argmin(np.abs(raman_shift - (center - width)))
-    max_idx = np.argmin(np.abs(raman_shift - (center + width)))
-    band_image = np.sum(data_cube[:, :, min_idx:max_idx + 1], axis=2)
+    shift = image.spectral_axis
+    min_idx = np.argmin(np.abs(shift - (center - width)))
+    max_idx = np.argmin(np.abs(shift - (center + width)))
+    band_image = np.sum(image.spectral_data[:, :, min_idx:max_idx + 1], axis=2)
     return normalize(correct_outliers(band_image))
