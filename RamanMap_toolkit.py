@@ -75,6 +75,7 @@ def parse_coordinates(column_names: list) -> list:
     coords = [re.search(r"\((\d+)/(\d+)\)", name) for name in column_names]
     return [(int(c.group(1)), int(c.group(2))) for c in coords if c]
 
+
 # --------------------------------------
 # Figure Configuration
 # --------------------------------------
@@ -108,6 +109,7 @@ def config_bar(colorbar) -> None:
     colorbar.outline.set_edgecolor('w')
     colorbar.set_label('Intensity', color='w')
 
+
 # --------------------------------------
 # Data Loading
 # --------------------------------------
@@ -129,6 +131,7 @@ def load_raman_txt(path: str) -> rp.SpectralImage:
         data_cube[y, x, :] = df.iloc[:, i + 1].values
     return rp.SpectralImage(data_cube, raman_shift)
 
+
 # --------------------------------------
 # Preprocessing Pipeline
 # --------------------------------------
@@ -147,6 +150,7 @@ def preprocess_maps(maps: list,
     ])
     return [routine.apply(m) for m in maps]
 
+
 # --------------------------------------
 # Intensity Mapping
 # --------------------------------------
@@ -159,6 +163,7 @@ def sum_intensity_map(image: rp.SpectralImage,
     total = np.sum(image.spectral_data, axis=2)
     total = correct_outliers(total, method=method)
     return normalize(total)
+
 
 # --------------------------------------
 # Visualization: Topography
@@ -178,6 +183,7 @@ def plot_topography(image: rp.SpectralImage,
     plt.tight_layout()
     plt.show()
 
+
 # --------------------------------------
 # Band Extraction and Visualization
 # --------------------------------------
@@ -195,7 +201,6 @@ def extract_band_map(image: rp.SpectralImage,
     band = np.sum(image.spectral_data[:, :, i0:i1+1], axis=2)
     band = correct_outliers(band, method=method)
     return normalize(band)
-
 
 def plot_band(image: rp.SpectralImage,
               center: float,
@@ -227,6 +232,7 @@ def plot_band(image: rp.SpectralImage,
     config_bar(cbar)
     plt.tight_layout()
 
+
 # --------------------------------------
 # Visualization: Multiband RGB
 # --------------------------------------
@@ -254,8 +260,10 @@ def plot_multiband_map(image: rp.SpectralImage,
 # --------------------------------------
 if __name__ == "__main__":
     file_path = "data/St kC CLs/Map St kC CL 14 Region 2.txt"
+
     logger.info("Loading data...")
     raw_map = load_raman_txt(file_path)
+
     logger.info("Preprocessing maps...")
     processed_map = preprocess_maps([raw_map], region=(250, 1800), win_len=15)[0]
 
@@ -267,7 +275,9 @@ if __name__ == "__main__":
     # Loop with progress bar
     for center, width, title, cmap, comp in tqdm(
             bands_to_plot, desc="Plotting bands", unit="band"):
+
         logger.info(f"{title} ({comp})...")
+
         plot_band(
             processed_map,
             center=center,
@@ -277,4 +287,5 @@ if __name__ == "__main__":
             method='median',
             compensation=comp
         )
+
     plt.show()
