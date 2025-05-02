@@ -152,11 +152,11 @@ def preprocess_maps(maps: list,
 
 
 # --------------------------------------
-# Intensity Mapping
+# Visualization: Topography
 # --------------------------------------
 
-def sum_intensity_map(image: rp.SpectralImage,
-                      method: str = 'median') -> np.ndarray:
+def sum_intensity(image: rp.SpectralImage,
+                  method: str = 'median') -> np.ndarray:
     """
     Sum all spectral intensities per pixel to create a topography map.
     """
@@ -165,10 +165,6 @@ def sum_intensity_map(image: rp.SpectralImage,
     return normalize(total)
 
 
-# --------------------------------------
-# Visualization: Topography
-# --------------------------------------
-
 def plot_topography(image: rp.SpectralImage,
                     title: str = "Raman Map - Total Intensity") -> None:
     """
@@ -176,7 +172,7 @@ def plot_topography(image: rp.SpectralImage,
     """
     plt.style.use('seaborn-v0_8-ticks')
     ax = config_figure(title, (2500, 2500), face='#1d1e24', edge='white')
-    img = sum_intensity_map(image)
+    img = sum_intensity(image)
     im = ax.imshow(img, cmap='inferno', origin='lower')
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     config_bar(cbar)
@@ -217,7 +213,7 @@ def plot_band(image: rp.SpectralImage,
     ax = config_figure(fig_title, figsize, face='#1D1E24', edge='white')
     band_img = extract_band_map(image, center, width, method=method)
     if compensation == 'diff':
-        topo = sum_intensity_map(image, method=method)
+        topo = sum_intensity(image, method=method)
         diff = band_img - topo
         mask = topo > np.percentile(topo, 5)
         diff[~mask] = 0
@@ -237,28 +233,111 @@ def plot_band(image: rp.SpectralImage,
 # Visualization: Multiband RGB
 # --------------------------------------
 
-def plot_multiband_map(image: rp.SpectralImage,
-                       bands: list,
-                       figsize: tuple = (2500, 2500),
-                       method: str = 'median') -> None:
+def plot_multiband(image: rp.SpectralImage,
+                   bands: list,
+                   figsize: tuple = (2500, 2500),
+                   method: str = 'median',
+                   colors: list = None,
+                   compensation: str = 'raw'):
+
     """
     Combine three single-band maps into an RGB image.
     """
-    chan = []
-    for center, width in bands:
-        chan.append(extract_band_map(image, center, width, method=method))
-    rgb = np.stack(chan, axis=2)
-    rgb = (rgb - rgb.min()) / (rgb.max() - rgb.min())
+
+    # 1) extrai cada canal
+    chan = [extract_band_map(image, c, w, method=method) for c, w in bands]
+
+    # Se for modo 'diff', subtrai topografia de cada banda
+    if compensation == 'diff':
+        topo = sum_intensity(image, method=method)
+
+        chan_diff = []
+
+        for band_img in chan:
+            diff = band_img - topo
+
+            # máscara de confiabilidade
+            mask = topo > np.percentile(topo, 5)
+            diff[~mask] = 0
+
+            # suaviza e clipe
+            from scipy.ndimage import gaussian_filter
+            smooth = gaussian_filter(diff, sigma=0.9)
+            clipped = np.clip(smooth, -0.1, +0.1)
+            chan_diff.append(normalize(clipped))
+
+        chan = chan_diff
+
+    # define cores padrão (R,G,B) se usuário não passou
+    if colors is None:
+        # pra 2 bandas: vermelho e verde; pra 3: R,G,B
+        default = [(1,0,0), (0,1,0), (0,0,1)]
+        colors = default[:len(chan)]
+
+    # cria rgb vazio
+    h, w = chan[0].shape
+    rgb = np.zeros((h, w, 3))
+
+    # mistura cada banda em seu canal, segundo a cor desejada
+    for i, band_img in enumerate(chan):
+        cr, cg, cb = colors[i]
+        rgb[..., 0] += band_img * cr
+        rgb[..., 1] += band_img * cg
+        rgb[..., 2] += band_img * cb
+    rgb = np.clip(rgb, 0, 1)
+
     ax = config_figure(f"RGB Bands {bands}", figsize, face='#1d1e24', edge='white')
     ax.imshow(rgb, origin='lower')
+
     plt.axis('off')
     plt.tight_layout()
-    plt.show()
 
 # --------------------------------------
 # Main Execution
 # --------------------------------------
 if __name__ == "__main__":
+
+    def showBands():
+
+        # Bands to plot: (center, width, title, cmap, compensation)
+        bands_to_plot = [
+            (941, 10, "Starch Band 941 cm$^{-1}$", 'bone', 'diff'),
+        ]
+        # Loop with progress bar
+        for center, width, title, cmap, comp in tqdm(
+                bands_to_plot, desc="Plotting bands", unit="band"):
+            logger.info(f"{title} ({comp})...")
+
+            plot_band(
+                processed_map,
+                center=center,
+                width=width,
+                title=title,
+                cmap=cmap,
+                method='median',
+                compensation=comp
+            )
+
+    def showMultibands():
+
+        logger.info("Plotting multiband map...")
+        plot_multiband(
+            processed_map,
+            bands=[(941, 10), (850, 10)],
+            colors=[(1, 1, 0), (0, 0, 1)],
+            method='median',
+            compensation='diff'
+        )
+
+        logger.info("Plotting multiband map...")
+        plot_multiband(
+            processed_map,
+            bands=[(941, 10), (850, 10)],
+            colors=[(1, 1, 0), (0, 0, 1)],
+            method='median',
+            compensation='raw'
+        )
+
     file_path = "data/St kC CLs/Map St kC CL 14 Region 2.txt"
 
     logger.info("Loading data...")
@@ -267,25 +346,7 @@ if __name__ == "__main__":
     logger.info("Preprocessing maps...")
     processed_map = preprocess_maps([raw_map], region=(250, 1800), win_len=15)[0]
 
-    # Bands to plot: (center, width, title, cmap, compensation)
-    bands_to_plot = [
-        (850, 10, "Starch Band 850 cm$^{-1}$", 'bone', 'diff'),
-        (850, 10, "Starch Band 850 cm$^{-1}$", 'bone', 'raw'),
-    ]
-    # Loop with progress bar
-    for center, width, title, cmap, comp in tqdm(
-            bands_to_plot, desc="Plotting bands", unit="band"):
-
-        logger.info(f"{title} ({comp})...")
-
-        plot_band(
-            processed_map,
-            center=center,
-            width=width,
-            title=title,
-            cmap=cmap,
-            method='median',
-            compensation=comp
-        )
+    showBands()
+    showMultibands()
 
     plt.show()
