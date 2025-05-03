@@ -100,11 +100,11 @@ def scale_ticks(ax,
     ax.set_xticks(x_pix)
     ax.set_xticklabels([f"{x:.0f}" for x in x_um])
     ax.set_yticks(y_pix)
-    ax.set_yticklabels([f"{y:.0f}" for y in y_um])
+    ax.set_yticklabels([f"{y:.0f}" for y in y_um[::-1]])  # reverse only the ticklabels
 
     # label axes in micrometers
-    ax.set_xlabel("X (µm)", color='whitesmoke', weight='bold')
-    ax.set_ylabel("Y (µm)", color='whitesmoke', weight='bold')
+    ax.set_xlabel("x (µm)", color='whitesmoke', weight='bold')
+    ax.set_ylabel("y (µm)", color='whitesmoke', weight='bold')
 
 
 # --------------------------------------
