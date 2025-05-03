@@ -124,7 +124,7 @@ def normalize(array: np.ndarray) -> np.ndarray:
     return (array - np.min(array)) / (np.max(array) - np.min(array))
 
 
-def detect_outliers(data: np.ndarray, threshold: float = 1.5) -> np.ndarray:
+def detect_outliers(data: np.ndarray, threshold: float = 3) -> np.ndarray:
     """
     Identify outliers using Z-score thresholding.
 
@@ -335,7 +335,7 @@ def plot_topography(image: rp.SpectralImage,
 
     im = ax.imshow(
         topo,
-        cmap='cividis',
+        cmap='magma',
         interpolation='nearest',
         origin='upper',
         aspect='equal')

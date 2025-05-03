@@ -27,6 +27,7 @@ def batch_process(input_folder: str, output_folder: str):
     :param output_folder: Directory to save output figures
     :type output_folder: str
     """
+
     def log_config():
         # Logging Configuration
 
@@ -36,12 +37,12 @@ def batch_process(input_folder: str, output_folder: str):
             datefmt='%H:%M:%S'
         )
 
-        log = logging.getLogger(__name__)
-        log.setLevel(logging.INFO)
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.INFO)
 
         coloredlogs.install(
             level='INFO',
-            logger=log,
+            logger=logger,
             fmt='[%(asctime)s] %(levelname)s: %(message)s',
             datefmt='%H:%M:%S',
             level_styles={
@@ -55,23 +56,28 @@ def batch_process(input_folder: str, output_folder: str):
                 'levelname': {'color': 'white', 'bold': True},
             }
         )
-        return log
 
-    logger = log_config()
+        return logger
 
-    input_path, output_path = Path(input_folder), Path(output_folder)
-    output_path.mkdir(exist_ok=True, parents=True)
+    def folders_config():
+        input_path, output_path = Path(input_folder), Path(output_folder)
+        output_path.mkdir(exist_ok=True, parents=True)
+
+        return input_path, output_path
+
+    log = log_config()
+    in_folder, out_folder = folders_config()
 
     # 1) Discover and load all map files
     raw_maps = []
-    map_files = [f for f in input_path.glob("*.txt") if "Map" in f.name]
-    logger.info(f"Found {len(map_files)} map files. Loading...")
+    map_files = [f for f in in_folder.glob("*.txt") if "Map" in f.name]
+    log.info(f"Found {len(map_files)} map files. Loading...")
     for f in tqdm(map_files, desc="Loading maps", unit="file"):
         raw_maps.append(rm.load_file(str(f)))
 
     # 2) Preprocess all maps at once
     proc_maps = []
-    logger.info("Preprocessing maps...")
+    log.info("Preprocessing maps...")
     for m in tqdm(raw_maps, desc="Preprocessing maps", unit="map"):
         proc_maps.append(rm.preprocess([m], region=REGION, win_len=WIN_LEN)[0])
 
@@ -80,13 +86,32 @@ def batch_process(input_folder: str, output_folder: str):
             """Generate and save the total intensity (topography) map."""
 
             rm.plot_topography(topo_proc, title=f"{topo_title} - Topography")
-            plt.gcf().savefig(output_path / f"{topo_base}_topo.png", dpi=300)
-            plt.gcf().savefig(output_path / f"{topo_base}_topo.svg", dpi=300)
+            filename = out_folder / f"{topo_base}_topo"
+            plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+            plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
             plt.close()
 
         def show_bands(bands_proc, bands_base, bands_title):
             """Generate and save individual band maps."""
 
+            # compensated
+            for center, width, label in BANDS:
+                rm.plot_band(
+                    bands_proc,
+                    center=center,
+                    width=width,
+                    title=f"{bands_title} - {label}",
+                    cmap='inferno',
+                    method='median',
+                    compensation='diff'
+                )
+
+                filename = out_folder / f"{bands_base}_band_{center}_diff"
+                plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+                plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
+                plt.close()
+
+            # raw
             for center, width, label in BANDS:
                 rm.plot_band(
                     bands_proc,
@@ -98,7 +123,9 @@ def batch_process(input_folder: str, output_folder: str):
                     compensation='raw'
                 )
 
-                plt.gcf().savefig(output_path / f"{bands_base}_band_{center}.png", dpi=300)
+                filename = out_folder / f"{bands_base}_band_{center}_raw"
+                plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+                plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
                 plt.close()
 
         def show_multibands(multi_proc, multi_base, multibands_title):
@@ -114,7 +141,10 @@ def batch_process(input_folder: str, output_folder: str):
                     method='median',
                     compensation='diff'
                 )
-                plt.gcf().savefig(output_path / f"{multi_base}_multiband_diff.png", dpi=300)
+
+                filename = out_folder / f"{multi_base}_diff"
+                plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+                plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
                 plt.close()
 
                 # raw
@@ -125,7 +155,10 @@ def batch_process(input_folder: str, output_folder: str):
                     method='median',
                     compensation='raw'
                 )
-                plt.gcf().savefig(output_path / f"{multi_base}_multiband_raw.png", dpi=300)
+
+                filename = out_folder / f"{multi_base}_raw"
+                plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+                plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
                 plt.close()
 
         def show_kmeans(kmeans_proc, kmeans_base, kmeans_title):
@@ -139,7 +172,7 @@ def batch_process(input_folder: str, output_folder: str):
             )
 
             rm.plot_cluster(labels, figsize=(2500, 2500), cmap='tab20')
-            plt.gcf().savefig(output_path / f"{kmeans_base}_kmeans.png", dpi=300)
+            plt.gcf().savefig(out_folder / f"{kmeans_base}_kmeans.png", dpi=300)
             plt.close()
 
         def show_pca(pca_proc, pca_base, pca_title):
@@ -158,7 +191,7 @@ def batch_process(input_folder: str, output_folder: str):
                     figsize=(2500, 2500),
                     cmap='RdBu_r'
                 )
-                plt.gcf().savefig(output_path / f"{pca_base}_PCA{i + 1}.png", dpi=300)
+                plt.gcf().savefig(out_folder / f"{pca_base}_PCA{i + 1}.png", dpi=300)
                 plt.close()
 
     # 4) Iterate over each preprocessed map and generate selected plots
@@ -168,7 +201,7 @@ def batch_process(input_folder: str, output_folder: str):
             base = raw_stem.replace(" ", "_")
             axis_title = raw_stem
 
-            logger.info(f"→ Generating figures for {txt_file.name}")
+            log.info(f"→ Generating figures for {txt_file.name}")
 
             if MAP_MODE == 'topography':
                 show_topography(proc, base, axis_title)
@@ -188,7 +221,7 @@ def batch_process(input_folder: str, output_folder: str):
             else:
                 print(f"MAP_MODE must be 'topography', 'bands', 'multi', 'k', or 'pca'.")
 
-    logger.info("\n\nDone! Maps generated!")
+    log.info("\n\nDone! Maps generated!")
 
 
 if __name__ == "__main__":
