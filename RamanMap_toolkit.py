@@ -59,6 +59,7 @@ plt.rcParams.update({
 # --------------------------------------
 # Axis Scaling Utility
 # --------------------------------------
+
 POINTS_PER_LINE  = 100      # pixels in X
 LINES_PER_IMAGE  = 100      # pixels in Y
 SCAN_WIDTH_UM    = 200.0    # µm in X
@@ -124,6 +125,18 @@ def normalize(array: np.ndarray) -> np.ndarray:
     return (array - np.min(array)) / (np.max(array) - np.min(array))
 
 
+def normalize_robust(array: np.ndarray,
+                     low_pct: float = 2,
+                     high_pct: float = 98) -> np.ndarray:
+    """
+    Scale array to [0,1] using lower/upper percentiles to avoid outlier-driven stretching.
+    """
+    lo, hi = np.percentile(array, [low_pct, high_pct])
+    clipped = np.clip(array, lo, hi)
+    return (clipped - lo) / (hi - lo)
+
+
+
 def detect_outliers(data: np.ndarray, threshold: float = 3) -> np.ndarray:
     """
     Identify outliers using Z-score thresholding.
@@ -142,7 +155,7 @@ def detect_outliers(data: np.ndarray, threshold: float = 3) -> np.ndarray:
     return np.abs(data - mean) > threshold * std
 
 
-def correct_outliers(array: np.ndarray, method: str = 'median') -> np.ndarray:
+def correct_outliers(array: np.ndarray, method: str = 'mean') -> np.ndarray:
     """
     Replace detected outliers in a 2D array with locally filtered values.
 
@@ -360,10 +373,22 @@ def sum_intensity(image: rp.SpectralImage,
     :return: 2D normalized intensity map.
     :rtype: np.ndarray
     """
+
+    def show_outliers():
+        mask = detect_outliers(total, threshold=1.5)
+        print("Total pixels:", total.size, "Outliers:", mask.sum())
+        plt.figure()
+        plt.imshow(mask, cmap='gray', origin='lower')
+        plt.title("Outlier Mask")
+        plt.show()
+
     total = np.sum(image.spectral_data, axis=2)
+    # show_outliers()
     total = correct_outliers(total, method=method)
 
-    return normalize(total)
+    # return normalize(total)
+    return normalize_robust(total, low_pct=2, high_pct=98)
+
 
 
 def plot_topography(image: rp.SpectralImage,
@@ -400,7 +425,7 @@ def plot_topography(image: rp.SpectralImage,
 def extract_band(image: rp.SpectralImage,
                  center: float,
                  width: float = 10,
-                 method: str = 'median') -> np.ndarray:
+                 method: str = 'mean') -> np.ndarray:
     """
     Integrate intensity around a specified Raman shift band.
 
@@ -433,7 +458,7 @@ def plot_band(image: rp.SpectralImage,
               title: str = None,
               figsize: tuple = (2500, 2500),
               cmap: str = 'inferno',
-              method: str = 'median',
+              method: str = 'mean',
               compensation: str = 'raw') -> None:
     """
     Plot a single Raman band map, with optional compensation by topography difference.
@@ -485,7 +510,7 @@ def plot_band(image: rp.SpectralImage,
 def plot_multiband(image: rp.SpectralImage,
                    bands: list,
                    figsize: tuple = (2500, 2500),
-                   method: str = 'median',
+                   method: str = 'mean',
                    colors: list = None,
                    compensation: str = 'raw') -> None:
     """
@@ -538,7 +563,7 @@ def plot_multiband(image: rp.SpectralImage,
 
 def compute_kmeans(image: rp.SpectralImage,
                    n_clusters: int = 4,
-                   method: str = 'median',
+                   method: str = 'mean',
                    compensation: str = 'raw') -> np.ndarray:
     """
     Apply k-means clustering to pixel spectra and return a 2D label map.
@@ -610,7 +635,7 @@ def plot_cluster(labels: np.ndarray,
 
 def compute_pca(image: rp.SpectralImage,
                 n_components: int = 3,
-                method: str = 'median') -> np.ndarray:
+                method: str = 'mean') -> np.ndarray:
     """
     Perform PCA on pixel spectra and return score maps.
 

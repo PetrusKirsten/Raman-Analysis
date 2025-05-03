@@ -66,6 +66,8 @@ def batch_process(input_folder: str, output_folder: str):
         return input_path, output_path
 
     log = log_config()
+    log.info(f"Initializing...")
+    log.info(f"Checking paths and folders...")
     in_folder, out_folder = folders_config()
 
     # 1) Discover and load all map files
@@ -241,7 +243,7 @@ if __name__ == "__main__":
 
     # Batch Parameters (adjust as needed)
     MAP_MODE       = 'topography'                    # choose the mode to the maps
-    SAMPLES_NAME   = 'St CLs'                        # which folder/sample group iterate
+    SAMPLES_NAME   = 'St kC CLs'                        # which folder/sample group iterate
     INPUT_FOLDER   = f"data/{SAMPLES_NAME}"          # folder containing .txt map files
     OUTPUT_FOLDER  = f"figures/maps/{SAMPLES_NAME}/{MAP_MODE}"  # where to save
     REGION         = (250, 1800)                     # spectral crop range (cm^-1)
