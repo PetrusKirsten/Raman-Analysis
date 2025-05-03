@@ -7,36 +7,13 @@ This script automates batch execution of the RamanMap_toolkit functions:
 - Generates and saves topography, single-band, multiband, k-means, and PCA plots
 - Uses progress bars and log messages for console feedback
 """
+
 import logging
 from tqdm import tqdm
 from pathlib import Path
 import RamanMap_toolkit as rm
 import matplotlib.pyplot as plt
 
-# --------------------------------------
-# Logging Configuration
-# --------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s: %(message)s',
-    datefmt='%H:%M:%S'
-)
-logger = logging.getLogger(__name__)
-
-# --------------------------------------
-# Batch Parameters (adjust as needed)
-# --------------------------------------
-INPUT_FOLDER   = "data/St CLs"                     # folder containing .txt map files
-OUTPUT_FOLDER  = "figures/maps/St CLs/multibands"  # where to save generated figures
-REGION         = (250, 1800)                       # spectral crop range (cm^-1)
-WIN_LEN        = 15                                # Savitzky-Golay window length
-N_CLUSTERS     = 4                                 # number of clusters for k-means
-PCA_COMPONENTS = 3                                 # number of PCA components to plot
-BANDS          = [                                 # list of (center, width, label) for band maps
-    (951, 10, "951 cm$^{-1}$"),
-    (850, 10, "850 cm$^{-1}$"),
-    (550, 20, "550 cm$^{-1}$"),
-]
 
 # --------------------------------------
 # Batch Processing Function
@@ -50,6 +27,16 @@ def batch_process(input_folder: str, output_folder: str):
     :param output_folder: Directory to save output figures
     :type output_folder: str
     """
+    def log_config():
+        # Logging Configuration
+        logging.basicConfig(
+            level=logging.INFO,
+            format='[%(asctime)s] %(levelname)s: %(message)s',
+            datefmt='%H:%M:%S'
+        )
+        return logging.getLogger(__name__)
+
+    logger = log_config()
 
     input_path, output_path = Path(input_folder), Path(output_folder)
     output_path.mkdir(exist_ok=True, parents=True)
@@ -67,7 +54,7 @@ def batch_process(input_folder: str, output_folder: str):
     for m in tqdm(raw_maps, desc="Preprocessing maps", unit="map"):
         proc_maps.append(rm.preprocess([m], region=REGION, win_len=WIN_LEN)[0])
 
-        # 3) Define helper functions for each plot type
+    # 3) Define helper functions for each plot type
         def show_topography(topo_proc, topo_base, topo_title):
             """Generate and save the total intensity (topography) map."""
 
@@ -153,7 +140,7 @@ def batch_process(input_folder: str, output_folder: str):
                 plt.gcf().savefig(output_path / f"{pca_base}_PCA{i + 1}.png", dpi=300)
                 plt.close()
 
-        # 4) Iterate over each preprocessed map and generate selected plots
+    # 4) Iterate over each preprocessed map and generate selected plots
         for txt_file, proc in zip(tqdm(map_files, desc="Plotting maps", unit="map"), proc_maps):
 
             raw_stem = txt_file.stem.removeprefix("Map ")
@@ -162,14 +149,42 @@ def batch_process(input_folder: str, output_folder: str):
 
             logger.info(f"→ Generating figures for {txt_file.name}")
 
-            show_topography(proc, base, axis_title)
-            show_bands(proc, base, axis_title)
-            show_multibands(proc, base, axis_title)
-            show_kmeans(proc, base, axis_title)
-            show_pca(proc, base, axis_title)
+            if MAP_MODE == 'topography':
+                show_topography(proc, base, axis_title)
 
-# --------------------------------------
-# Entry Point
-# --------------------------------------
+            elif MAP_MODE == 'bands':
+                show_bands(proc, base, axis_title)
+
+            elif MAP_MODE == 'multi':
+                show_multibands(proc, base, axis_title)
+
+            elif MAP_MODE == 'k':
+                show_kmeans(proc, base, axis_title)
+
+            elif MAP_MODE == 'pca':
+                show_pca(proc, base, axis_title)
+
+            else:
+                print(f"MAP_MODE must be 'topography', 'bands', 'multi', 'k', or 'pca'.")
+
+    logger.info("\nDone! Maps generated!")
+
+
 if __name__ == "__main__":
+
+    # Batch Parameters (adjust as needed)
+    MAP_MODE       = 'topography'                    # choose the mode to the maps
+    SAMPLES_NAME   = 'St CLs'                        # which folder/sample group iterate
+    INPUT_FOLDER   = f"data/{SAMPLES_NAME}"          # folder containing .txt map files
+    OUTPUT_FOLDER  = f"figures/maps/{SAMPLES_NAME}/{MAP_MODE}"  # where to save
+    REGION         = (250, 1800)                     # spectral crop range (cm^-1)
+    WIN_LEN        = 15                              # Savitzky-Golay window length
+    N_CLUSTERS     = 4                               # number of clusters for k-means
+    PCA_COMPONENTS = 3                               # number of PCA components to plot
+    BANDS          = [                               # list of (center, width, label) for band maps
+        (951, 10, "951 cm$^{-1}$"),
+        (850, 10, "850 cm$^{-1}$"),
+        (550, 20, "550 cm$^{-1}$"),
+    ]
+
     batch_process(INPUT_FOLDER, OUTPUT_FOLDER)
