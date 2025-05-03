@@ -40,6 +40,12 @@ font_name = prop.get_name()  # ex: "Helvetica Neue"
 # 3) Atualiza o rcParams para usar essa fonte
 plt.rcParams.update({
     'font.family':      font_name,
+    'font.size':        14,  # default text size
+    'axes.titlesize':   18,  # título dos eixos
+    'axes.labelsize':   16,  # rótulos X/Y
+    'xtick.labelsize':  12,  # números dos ticks
+    'ytick.labelsize':  12,
+    'legend.fontsize':  12,  # legendas (se usar)
     'text.color':       'whitesmoke',
     'axes.labelcolor':  'whitesmoke',
     'xtick.color':      'whitesmoke',

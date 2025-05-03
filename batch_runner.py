@@ -9,6 +9,7 @@ This script automates batch execution of the RamanMap_toolkit functions:
 """
 
 import logging
+import coloredlogs
 from tqdm import tqdm
 from pathlib import Path
 import RamanMap_toolkit as rm
@@ -29,12 +30,33 @@ def batch_process(input_folder: str, output_folder: str):
     """
     def log_config():
         # Logging Configuration
+
         logging.basicConfig(
             level=logging.INFO,
             format='[%(asctime)s] %(levelname)s: %(message)s',
             datefmt='%H:%M:%S'
         )
-        return logging.getLogger(__name__)
+
+        log = logging.getLogger(__name__)
+        log.setLevel(logging.INFO)
+
+        coloredlogs.install(
+            level='INFO',
+            logger=log,
+            fmt='[%(asctime)s] %(levelname)s: %(message)s',
+            datefmt='%H:%M:%S',
+            level_styles={
+                'info': {'color': 'green'},
+                'warning': {'color': 'yellow'},
+                'error': {'color': 'red', 'bold': True},
+                'critical': {'color': 'red', 'bold': True, 'background': 'white'},
+            },
+            field_styles={
+                'asctime': {'color': 'blue'},
+                'levelname': {'color': 'white', 'bold': True},
+            }
+        )
+        return log
 
     logger = log_config()
 
