@@ -136,8 +136,7 @@ def normalize_robust(array: np.ndarray,
     return (clipped - lo) / (hi - lo)
 
 
-
-def detect_outliers(data: np.ndarray, threshold: float = 3) -> np.ndarray:
+def detect_outliers(data: np.ndarray, threshold: float = 1.5) -> np.ndarray:
     """
     Identify outliers using Z-score thresholding.
 
@@ -316,8 +315,8 @@ def plot_mean_spectrum(image: rp.SpectralImage,
 
     # styling
     ax.set_title(title, color='#383838')
-    ax.set_xlabel("Raman Shift (cm⁻¹)", color='#383838')
-    ax.set_ylabel("Intensity (a.u.)", color='#383838')
+    ax.set_xlabel("Raman Shift (cm$^{-1}$)", color='#383838')
+    ax.set_ylabel("Intensity", color='#383838')
     ax.tick_params(colors='#383838', direction='out', length=3, width=.75, pad=3)
 
     for spine in ax.spines.values():
@@ -375,7 +374,7 @@ def sum_intensity(image: rp.SpectralImage,
     """
 
     def show_outliers():
-        mask = detect_outliers(total, threshold=1.5)
+        mask = detect_outliers(total)
         print("Total pixels:", total.size, "Outliers:", mask.sum())
         plt.figure()
         plt.imshow(mask, cmap='gray', origin='lower')
@@ -385,7 +384,6 @@ def sum_intensity(image: rp.SpectralImage,
     total = np.sum(image.spectral_data, axis=2)
     # show_outliers()
     total = correct_outliers(total, method=method)
-
     # return normalize(total)
     return normalize_robust(total, low_pct=2, high_pct=98)
 
@@ -497,7 +495,7 @@ def plot_band(image: rp.SpectralImage,
         clipped = np.clip(smooth, -0.1, +0.1)
         band_img = normalize(clipped)
 
-    im = ax.imshow(normalize(band_img), cmap=cmap, origin='upper')
+    im = ax.imshow(normalize(band_img), cmap=cmap, origin='upper', interpolation='bilinear')
     scale_ticks(ax)
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     config_bar(cbar)

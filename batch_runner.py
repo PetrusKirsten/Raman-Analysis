@@ -15,6 +15,9 @@ from pathlib import Path
 import RamanMap_toolkit as rm
 import matplotlib.pyplot as plt
 
+from RamanMap_toolkit import sum_intensity
+
+
 # --------------------------------------
 # Batch Processing Function
 # --------------------------------------
@@ -243,10 +246,10 @@ if __name__ == "__main__":
 
     # Batch Parameters (adjust as needed)
     MAP_MODE       = 'topography'                    # choose the mode to the maps
-    SAMPLES_NAME   = 'St kC CLs'                        # which folder/sample group iterate
+    SAMPLES_NAME   = 'Carrageenans'                      # which folder/sample group iterate
     INPUT_FOLDER   = f"data/{SAMPLES_NAME}"          # folder containing .txt map files
     OUTPUT_FOLDER  = f"figures/maps/{SAMPLES_NAME}/{MAP_MODE}"  # where to save
-    REGION         = (250, 1800)                     # spectral crop range (cm^-1)
+    REGION         = (40, 1785)                      # spectral crop range (cm^-1)
     WIN_LEN        = 15                              # Savitzky-Golay window length
     N_CLUSTERS     = 4                               # number of clusters for k-means
     PCA_COMPONENTS = 3                               # number of PCA components to plot
