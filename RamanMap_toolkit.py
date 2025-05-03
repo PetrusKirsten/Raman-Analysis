@@ -57,6 +57,57 @@ plt.rcParams.update({
 })
 
 # --------------------------------------
+# Axis Scaling Utility
+# --------------------------------------
+POINTS_PER_LINE  = 100      # pixels in X
+LINES_PER_IMAGE  = 100      # pixels in Y
+SCAN_WIDTH_UM    = 200.0    # µm in X
+SCAN_HEIGHT_UM   = 200.0    # µm in Y
+
+def scale_ticks(ax,
+                points_x: int = POINTS_PER_LINE,
+                lines_y: int = LINES_PER_IMAGE,
+                width_um: float = SCAN_WIDTH_UM,
+                height_um: float = SCAN_HEIGHT_UM,
+                n_ticks: int = 5) -> None:
+    """
+    Configure X/Y axis ticks by converting pixel indices into micrometers.
+
+    :param ax: Matplotlib Axes to configure.
+    :type ax: matplotlib.axes.Axes
+    :param points_x: Total number of pixels along the X axis.
+    :type points_x: int
+    :param lines_y: Total number of pixels along the Y axis.
+    :type lines_y: int
+    :param width_um: Physical scan width in micrometers (X direction).
+    :type width_um: float
+    :param height_um: Physical scan height in micrometers (Y direction).
+    :type height_um: float
+    :param n_ticks: Number of tick marks to display.
+    :type n_ticks: int
+    """
+    import numpy as _np
+
+    # generate equally spaced pixel positions
+    x_pix = _np.linspace(0, points_x - 1, n_ticks)
+    y_pix = _np.linspace(0, lines_y - 1, n_ticks)
+
+    # convert pixel positions to micrometers
+    x_um = _np.linspace(0, width_um, n_ticks)
+    y_um = _np.linspace(0, height_um, n_ticks)
+
+    # apply ticks and labels
+    ax.set_xticks(x_pix)
+    ax.set_xticklabels([f"{x:.0f}" for x in x_um])
+    ax.set_yticks(y_pix)
+    ax.set_yticklabels([f"{y:.0f}" for y in y_um])
+
+    # label axes in micrometers
+    ax.set_xlabel("X [µm]", color='whitesmoke', weight='bold')
+    ax.set_ylabel("Y [µm]", color='whitesmoke', weight='bold')
+
+
+# --------------------------------------
 # Utility Functions
 # --------------------------------------
 
@@ -287,10 +338,12 @@ def plot_topography(image: rp.SpectralImage,
         cmap='cividis',
         interpolation='nearest',
         origin='upper',
-        aspect='equal'
-    )
+        aspect='equal')
+    scale_ticks(ax)
+
     cbar = plt.colorbar(im, ax=ax, fraction=0.04, pad=0.04)
     config_bar(cbar)
+
     plt.tight_layout(pad=0.5)
 
 # --------------------------------------
@@ -372,7 +425,8 @@ def plot_band(image: rp.SpectralImage,
         clipped = np.clip(smooth, -0.1, +0.1)
         band_img = normalize(clipped)
 
-    im = ax.imshow(normalize(band_img), cmap=cmap, origin='lower')
+    im = ax.imshow(normalize(band_img), cmap=cmap, origin='upper')
+    scale_ticks(ax)
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     config_bar(cbar)
     plt.tight_layout()
@@ -426,7 +480,8 @@ def plot_multiband(image: rp.SpectralImage,
     rgb = np.clip(rgb, 0, 1)
 
     ax = config_figure(f"RGB Bands {bands}", figsize, face='#1d1e24', edge='white')
-    ax.imshow(rgb, origin='lower')
+    ax.imshow(rgb, origin='upper')
+    scale_ticks(ax)
     plt.axis('off')
     plt.tight_layout()
 
@@ -497,7 +552,8 @@ def plot_cluster(labels: np.ndarray,
     :type cmap: str
     """
     ax = config_figure("Cluster Map", figsize, face='#1d1e24', edge='white')
-    ax.imshow(labels, cmap=cmap, origin='lower')
+    ax.imshow(labels, cmap=cmap, origin='upper')
+    scale_ticks(ax)
     plt.axis('off')
     plt.tight_layout()
 
@@ -549,7 +605,8 @@ def plot_pca(score_map: np.ndarray,
     :type cmap: str
     """
     ax = config_figure(f"PCA Component {component}", figsize, face='#1d1e24', edge='white')
-    im = ax.imshow(score_map, cmap=cmap, origin='lower')
+    im = ax.imshow(score_map, cmap=cmap, origin='upper')
+    scale_ticks(ax)
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     config_bar(cbar)
     plt.tight_layout()
