@@ -15,7 +15,6 @@ from pathlib import Path
 import RamanMap_toolkit as rm
 import matplotlib.pyplot as plt
 
-
 # --------------------------------------
 # Batch Processing Function
 # --------------------------------------

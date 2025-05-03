@@ -41,8 +41,8 @@ font_name = prop.get_name()  # ex: "Helvetica Neue"
 plt.rcParams.update({
     'font.family':      font_name,
     'font.size':        14,  # default text size
-    'axes.titlesize':   18,  # título dos eixos
-    'axes.labelsize':   16,  # rótulos X/Y
+    'axes.titlesize':   16,  # título dos eixos
+    'axes.labelsize':   14,  # rótulos X/Y
     'xtick.labelsize':  12,  # números dos ticks
     'ytick.labelsize':  12,
     'legend.fontsize':  12,  # legendas (se usar)
@@ -103,8 +103,8 @@ def scale_ticks(ax,
     ax.set_yticklabels([f"{y:.0f}" for y in y_um])
 
     # label axes in micrometers
-    ax.set_xlabel("X [µm]", color='whitesmoke', weight='bold')
-    ax.set_ylabel("Y [µm]", color='whitesmoke', weight='bold')
+    ax.set_xlabel("X (µm)", color='whitesmoke', weight='bold')
+    ax.set_ylabel("Y (µm)", color='whitesmoke', weight='bold')
 
 
 # --------------------------------------
