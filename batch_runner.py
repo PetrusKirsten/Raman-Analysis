@@ -82,7 +82,19 @@ def batch_process(input_folder: str, output_folder: str):
         proc_maps.append(rm.preprocess([m], region=REGION, win_len=WIN_LEN)[0])
 
     # 3) Define helper functions for each plot type
-        def show_topography(topo_proc, topo_base, topo_title):
+        def run_spectra(spec_base, spec_title):
+
+            ax = rm.plot_mean_spectrum(
+                proc,
+                figsize=(10, 6),
+                title=f"Mean Spectrum – {spec_title}",
+                line_kwargs={'color': 'crimson', 'lw': 1.})
+
+            filename = out_folder / f"{spec_base}_spectrum"
+            plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+            plt.close()
+
+        def run_topograhpy(topo_proc, topo_base, topo_title):
             """Generate and save the total intensity (topography) map."""
 
             rm.plot_topography(topo_proc, title=f"{topo_title} - Topography")
@@ -91,7 +103,7 @@ def batch_process(input_folder: str, output_folder: str):
             plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
             plt.close()
 
-        def show_bands(bands_proc, bands_base, bands_title):
+        def run_bands(bands_proc, bands_base, bands_title):
             """Generate and save individual band maps."""
 
             # compensated
@@ -128,7 +140,7 @@ def batch_process(input_folder: str, output_folder: str):
                 plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
                 plt.close()
 
-        def show_multibands(multi_proc, multi_base, multibands_title):
+        def run_multibands(multi_proc, multi_base, multibands_title):
             """Generate and save compensated and raw multiband RGB images."""
 
             if len(BANDS) >= 3:
@@ -161,7 +173,7 @@ def batch_process(input_folder: str, output_folder: str):
                 plt.gcf().savefig(filename.with_suffix('.svg'), dpi=300)
                 plt.close()
 
-        def show_kmeans(kmeans_proc, kmeans_base, kmeans_title):
+        def run_kmeans(kmeans_proc, kmeans_base, kmeans_title):
             """Generate and save k-means clustering map."""
 
             labels = rm.compute_kmeans(
@@ -175,7 +187,7 @@ def batch_process(input_folder: str, output_folder: str):
             plt.gcf().savefig(out_folder / f"{kmeans_base}_kmeans.png", dpi=300)
             plt.close()
 
-        def show_pca(pca_proc, pca_base, pca_title):
+        def run_pca(pca_proc, pca_base, pca_title):
             """Generate and save PCA component score maps."""
 
             scores = rm.compute_pca(
@@ -196,27 +208,28 @@ def batch_process(input_folder: str, output_folder: str):
 
     # 4) Iterate over each preprocessed map and generate selected plots
         for txt_file, proc in zip(tqdm(map_files, desc="Plotting maps", unit="map"), proc_maps):
+            log.info(f"→ Generating figures for {txt_file.name}")
 
             raw_stem = txt_file.stem.removeprefix("Map ")
             base = raw_stem.replace(" ", "_")
             axis_title = raw_stem
 
-            log.info(f"→ Generating figures for {txt_file.name}")
+            run_spectra(base, axis_title)
 
             if MAP_MODE == 'topography':
-                show_topography(proc, base, axis_title)
+                run_topograhpy(proc, base, axis_title)
 
             elif MAP_MODE == 'bands':
-                show_bands(proc, base, axis_title)
+                run_bands(proc, base, axis_title)
 
             elif MAP_MODE == 'multi':
-                show_multibands(proc, base, axis_title)
+                run_multibands(proc, base, axis_title)
 
             elif MAP_MODE == 'k':
-                show_kmeans(proc, base, axis_title)
+                run_kmeans(proc, base, axis_title)
 
             elif MAP_MODE == 'pca':
-                show_pca(proc, base, axis_title)
+                run_pca(proc, base, axis_title)
 
             else:
                 print(f"MAP_MODE must be 'topography', 'bands', 'multi', 'k', or 'pca'.")

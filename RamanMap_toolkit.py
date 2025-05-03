@@ -269,6 +269,53 @@ def load_file(path: str) -> rp.SpectralImage:
 
     return rp.SpectralImage(data_cube, raman_shift)
 
+def plot_mean_spectrum(image: rp.SpectralImage,
+                       figsize: tuple = (8, 5),
+                       title: str = "Mean Raman Spectrum",
+                       line_kwargs: dict = None) -> plt.Axes:
+    """
+    Plot the average Raman spectrum over all pixels of a SpectralImage.
+
+    :param image: SpectralImage instance.
+    :type image: rp.SpectralImage
+    :param figsize: Size of the figure in inches (width, height).
+    :type figsize: tuple
+    :param title: Title of the plot.
+    :type title: str
+    :param line_kwargs: Optional dict of kwargs to pass to `ax.plot`.
+    :type line_kwargs: dict
+    :return: The Matplotlib Axes object.
+    :rtype: plt.Axes
+    """
+
+    # compute mean spectrum
+    mean_spec = image.spectral_data.mean(axis=(0, 1))
+    wn = image.spectral_axis
+
+    # set up figure
+    fig, ax = plt.subplots(figsize=figsize)
+    fig.patch.set_facecolor('w')
+    ax.set_facecolor('w')
+
+    # plot
+    kwargs = {} if line_kwargs is None else line_kwargs
+    ax.plot(wn, mean_spec, **kwargs)
+
+    # styling
+    ax.set_title(title, color='#383838')
+    ax.set_xlabel("Raman Shift (cm⁻¹)", color='#383838')
+    ax.set_ylabel("Intensity (a.u.)", color='#383838')
+    ax.tick_params(colors='#383838', direction='out', length=3, width=.75, pad=3)
+
+    for spine in ax.spines.values():
+        spine.set_edgecolor('#383838')
+        spine.set_linewidth(.75)
+    ax.grid(False)
+    plt.tight_layout()
+
+    return ax
+
+
 # --------------------------------------
 # Preprocessing Pipeline
 # --------------------------------------
@@ -302,7 +349,7 @@ def preprocess(maps: list,
 # --------------------------------------
 
 def sum_intensity(image: rp.SpectralImage,
-                  method: str = 'median') -> np.ndarray:
+                  method: str = 'mean') -> np.ndarray:
     """
     Sum spectral intensities across all shifts to create a topography map.
 
