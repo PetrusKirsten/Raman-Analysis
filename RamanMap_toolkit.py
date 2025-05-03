@@ -17,12 +17,38 @@ import pandas as pd                      # data handling
 import ramanspy as rp                    # RamanSPy for spectral images and preprocessing
 import matplotlib.pyplot as plt          # plotting engine
 from sklearn.cluster import KMeans       # K-means clustering
+import matplotlib.font_manager as fm     # font settings
 from sklearn.decomposition import PCA    # PCA clustering
 from matplotlib.gridspec import GridSpec  # figure layout manager
 from scipy.ndimage import median_filter, uniform_filter, gaussian_filter  # filters for outlier correction
 
 # Limit the number of physical cores for loky (adjust as needed)
 os.environ["LOKY_MAX_CPU_COUNT"] = "1"
+
+# print(f'\nList  of availables styles:\n{plt.style.available}\n')
+plt.style.use('seaborn-v0_8')
+
+# 1) Adiciona o arquivo de fonte ao FontManager
+font_path = ("C:/Users/petru/AppData/Local/Programs/Python/Python313/Lib/site-packages/matplotlib/mpl-data/fonts/ttf/"
+             "helvetica-light-587ebe5a59211.ttf")      # ou o seu arquivo FiraSans.otf, etc.
+fm.fontManager.addfont(font_path)
+
+# 2) Pega o nome interno da fonte (veja no próprio arquivo ou use fm.FontProperties)
+prop = fm.FontProperties(fname=font_path)
+font_name = prop.get_name()  # ex: "Helvetica Neue"
+
+# 3) Atualiza o rcParams para usar essa fonte
+plt.rcParams.update({
+    'font.family':      font_name,
+    'text.color':       'whitesmoke',
+    'axes.labelcolor':  'whitesmoke',
+    'xtick.color':      'whitesmoke',
+    'ytick.color':      'whitesmoke',
+    'axes.edgecolor':   'k',
+    'figure.facecolor': '#09141E',
+    'axes.facecolor':   '#09141E',
+    'savefig.dpi':      300,
+})
 
 # --------------------------------------
 # Utility Functions
@@ -108,8 +134,8 @@ def parse_coordinates(column_names: list) -> list:
 
 def config_figure(fig_title: str,
                   size: tuple,
-                  face: str = 'white',
-                  edge: str = '#383838') -> plt.Axes:
+                  face: str = '#09141E',
+                  edge: str = 'k') -> plt.Axes:
     """
     Create a styled Matplotlib Axes with specified background and edge colors.
 
@@ -126,16 +152,18 @@ def config_figure(fig_title: str,
     """
 
     dpi = 300
-    height, width = size[0] / dpi, size[1] / dpi
+    w, h = size[0] / dpi, size[1] / dpi
 
-    fig = plt.figure(figsize=(height, width), facecolor=face, edgecolor='w')
-    ax = fig.add_subplot(GridSpec(1, 1)[0])
-
-    ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(1)
-    ax.spines[['top', 'bottom', 'left', 'right']].set_edgecolor(edge)
-    ax.set_title(fig_title, color='w')
-    ax.tick_params(colors='w')
+    fig, ax = plt.subplots(figsize=(w, h), facecolor=face)
     ax.set_facecolor(face)
+
+    ax.set_title(fig_title, color='whitesmoke', weight='bold', pad=12)
+    ax.tick_params(colors='whitesmoke', direction='out', length=0, width=0, pad=2)
+    ax.set_aspect('equal')
+    ax.grid(False)  # remover grades de fundo, se usar 'whitegrid' pode manter leves
+    for spine in ax.spines.values():
+        spine.set_edgecolor(edge)
+        spine.set_linewidth(.75)
 
     return ax
 
@@ -148,10 +176,10 @@ def config_bar(colorbar) -> None:
     :type colorbar: matplotlib.colorbar.Colorbar
     """
 
-    colorbar.ax.yaxis.set_tick_params(color='w')
-    colorbar.ax.tick_params(colors='w')
-    colorbar.outline.set_edgecolor('w')
-    colorbar.set_label('Intensity', color='w')
+    colorbar.ax.yaxis.set_tick_params(color='whitesmoke')
+    colorbar.ax.tick_params(color='whitesmoke', labelcolor='whitesmoke')
+    colorbar.outline.set_edgecolor('whitesmoke')
+    colorbar.set_label('Normalized intensity', color='whitesmoke', weight='bold', labelpad=8)
 
 # --------------------------------------
 # Data Loading
@@ -245,14 +273,19 @@ def plot_topography(image: rp.SpectralImage,
     :type title: str
     """
 
-    plt.style.use('seaborn-v0_8-ticks')
-    ax = config_figure(title, (2500, 2500), face='#1d1e24', edge='white')
-    img = sum_intensity(image)
+    ax = config_figure(title, (2400, 2400))
+    topo = sum_intensity(image)
 
-    im = ax.imshow(img, cmap='bone', origin='upper', interpolation='none')
-    cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    im = ax.imshow(
+        topo,
+        cmap='cividis',
+        interpolation='nearest',
+        origin='upper',
+        aspect='equal'
+    )
+    cbar = plt.colorbar(im, ax=ax, fraction=0.04, pad=0.04)
     config_bar(cbar)
-    plt.tight_layout()
+    plt.tight_layout(pad=0.5)
 
 # --------------------------------------
 # Band Extraction and Visualization

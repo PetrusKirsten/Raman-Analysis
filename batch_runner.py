@@ -167,7 +167,7 @@ def batch_process(input_folder: str, output_folder: str):
             else:
                 print(f"MAP_MODE must be 'topography', 'bands', 'multi', 'k', or 'pca'.")
 
-    logger.info("\nDone! Maps generated!")
+    logger.info("\n\nDone! Maps generated!")
 
 
 if __name__ == "__main__":
