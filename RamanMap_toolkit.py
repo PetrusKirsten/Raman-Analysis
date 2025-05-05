@@ -56,9 +56,12 @@ plt.rcParams.update({
     'savefig.dpi':      300,
 })
 
+
 # --------------------------------------
+# Utility Functions
+# --------------------------------------
+
 # Axis Scaling Utility
-# --------------------------------------
 
 POINTS_PER_LINE  = 100      # pixels in X
 LINES_PER_IMAGE  = 100      # pixels in Y
@@ -108,9 +111,72 @@ def scale_ticks(ax,
     ax.set_ylabel("y (µm)", color='whitesmoke', weight='bold')
 
 
-# --------------------------------------
-# Utility Functions
-# --------------------------------------
+# Outlier Mask Plotting Utility
+
+def plot_outlier_mask(array: np.ndarray,
+                      title: str = "Outlier Mask",
+                      figsize: tuple = (2400, 2400)) -> None:
+    """
+    Plot a binary mask of detected outliers for any 2D map.
+
+    :param array: 2D intensity map (e.g. topo or band).
+    :type array: np.ndarray
+    :param title: Title of the plot.
+    :type title: str
+    :param figsize: Figure size in pixels (width, height).
+    :type figsize: tuple
+    :param method: Outlier correction method used in detection.
+    :type method: str
+    """
+
+    mask = detect_outliers(array, threshold=1.5)
+
+    ax = config_figure(f'{title} ({mask.sum()}/{mask.size})', figsize)
+    im = ax.imshow(mask, cmap='gray', origin='upper')
+    scale_ticks(ax)
+
+    cbar = plt.colorbar(im, ax=ax, fraction=0.04, pad=0.04)
+    config_bar(cbar)
+    plt.tight_layout()
+
+
+def plot_histogram(data,
+                   bins: int = 50,
+                   title: str = "Pixel Value Histogram",
+                   figsize: tuple = (9, 5)) -> None:
+    """
+    Plot a histogram of pixel values from a 2D map (topography, band, etc).
+
+    :param data: Either a 2D numpy array or a SpectralImage.
+    :type data: np.ndarray or rp.SpectralImage
+    :param bins: Number of histogram bins.
+    :type bins: int
+    :param title: Title of the histogram plot.
+    :type title: str
+    :param figsize: Figure size in inches.
+    :type figsize: tuple
+    """
+    # se for SpectralImage, extrai o 2D via sum_intensity
+
+    if hasattr(data, "spectral_data"):
+        arr2d = sum_intensity(data, method='mean')
+    else:
+        arr2d = data
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.set_title(title, color='whitesmoke')
+    ax.set_xlabel("Normalized intensity", color='whitesmoke')
+    ax.set_ylabel("Count", color='whitesmoke')
+    ax.set_xlim((0, 1))
+    ax.tick_params(colors='whitesmoke')
+    ax.set_xticks(np.linspace(0, 1, 11))
+    ax.grid(False)
+    for spine in ax.spines.values():
+        spine.set_edgecolor('whitesmoke')
+    ax.hist(arr2d.flatten(), bins=bins, color='slategrey', alpha=0.8, rwidth=0.9)
+
+    plt.tight_layout()
 
 def normalize(array: np.ndarray) -> np.ndarray:
     """
@@ -136,7 +202,7 @@ def normalize_robust(array: np.ndarray,
     return (clipped - lo) / (hi - lo)
 
 
-def detect_outliers(data: np.ndarray, threshold: float = 1.5) -> np.ndarray:
+def detect_outliers(data: np.ndarray, threshold: float = 1.) -> np.ndarray:
     """
     Identify outliers using Z-score thresholding.
 
@@ -382,11 +448,9 @@ def sum_intensity(image: rp.SpectralImage,
         plt.show()
 
     total = np.sum(image.spectral_data, axis=2)
-    # show_outliers()
     total = correct_outliers(total, method=method)
     # return normalize(total)
     return normalize_robust(total, low_pct=2, high_pct=98)
-
 
 
 def plot_topography(image: rp.SpectralImage,
