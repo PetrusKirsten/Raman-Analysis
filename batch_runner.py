@@ -9,6 +9,8 @@ This script automates batch execution of the RamanMap_toolkit functions:
 """
 
 import logging
+import time
+
 import coloredlogs
 import numpy as np
 from tqdm import tqdm
@@ -71,27 +73,30 @@ def batch_process(input_folder: str, output_folder: str):
         return input_path, output_path, svg_path
 
     log = log_config()
-    log.info(f"Initializing...")
-    log.info(f"Checking paths and folders...")
+    log.info(f"Initializing..."); time.sleep(1)
+    log.info(f"Running for '{SAMPLES_NAME}'!"); time.sleep(1)
+    log.info(f"Checking paths and folders..."); time.sleep(1)
+    log.info(f"INPUT_FOLDER: {INPUT_FOLDER} OK! "); time.sleep(.5)
+    log.info(f"OUTPUT_FOLDER: {OUTPUT_FOLDER} OK!"); time.sleep(.5)
     in_folder, out_folder, svg_folder = folders_config()
 
     # 1) Discover and load all map files
     raw_maps = []
     map_files = [f for f in in_folder.glob("*.txt") if "Map" in f.name]
 
-    log.info(f"Found {len(map_files)} map files:")
+    log.info(f"Found {len(map_files)} map files:"); time.sleep(1)
+    for f in map_files:
+        print(f'\t\t\t\t→ {f.base()}')
+    time.sleep(.5)
     for f in tqdm(map_files, desc="Loading maps", unit="file"):
         raw_maps.append(rm.load_file(str(f)))
 
     # 2) Preprocess all maps at once
     proc_maps = []
-    log.info("Preprocessing maps...")
-    for m in raw_maps:
-
+    for m in tqdm(raw_maps, desc="Preprocessing maps", unit="maps"):
         proc_maps.append(rm.preprocess([m], region=REGION, win_len=WIN_LEN)[0])
 
-    # 3) Define helper functions for each plot type
-
+    # Define helper functions for each plot type
     def run_spectra(spec_base, spec_title):
 
         ax = rm.plot_mean_spectrum(
@@ -128,7 +133,10 @@ def batch_process(input_folder: str, output_folder: str):
     def run_topography(topo_proc, topo_base, topo_title):
         """Generate and save the total intensity (topography) map."""
 
-        rm.plot_topography(topo_proc, title=f"{topo_title} - Topography")
+        rm.plot_topography(
+            topo_proc,
+            title=f"{topo_title} - Topography", figsize=(2500, 2500),
+            colormap='magma', im_filter='nearest')
 
         png_path = out_folder / f"{topo_base}_topography.png"
         plt.gcf().savefig(png_path, dpi=300)
@@ -275,19 +283,19 @@ def batch_process(input_folder: str, output_folder: str):
         base = raw_stem.replace(" ", "_")
         axis_title = raw_stem
 
-        log.info(f"→ Generating figures for {txt_file.name}")
+        log.info(f"\n→ Generating figures for {txt_file.name}:"); time.sleep(1)
 
-        log.info("Plotting spectra...")
+        log.info("Plotting spectra..."); time.sleep(.5)
         run_spectra(base, axis_title)
 
-        log.info("Plotting outliers map...")
+        log.info("Plotting outliers map..."); time.sleep(.5)
         run_outliers(proc, base, axis_title, method='mean')
 
-        log.info("Plotting final map histogram...")
+        log.info("Plotting final map histogram..."); time.sleep(.5)
         run_histogram(proc, base, axis_title)
 
         if MAP_MODE == 'topography':
-            log.info("Plotting topography map...")
+            log.info("Plotting topography map..."); time.sleep(.5)
             run_topography(proc, base, axis_title)
 
         elif MAP_MODE == 'bands':
@@ -309,19 +317,19 @@ def batch_process(input_folder: str, output_folder: str):
         else:
             print(f"MAP_MODE must be 'topography', 'bands', 'multi', 'k', or 'pca'.")
 
-        log.info(f"{txt_file.name} figures done!")
+        log.info(f"{txt_file.name} figures done!"); time.sleep(1)
 
-    log.info(f"→ Done! All maps were saved in {out_folder.resolve()}")
+    log.info(f"\n→ Done! All maps were saved in {out_folder.resolve()}")
 
 
 if __name__ == "__main__":
 
     # Batch Parameters (adjust as needed)
     MAP_MODE       = 'topography'                    # choose the mode to the maps
-    SAMPLES_NAME   = 'Carrageenans'                      # which folder/sample group iterate
+    SAMPLES_NAME   = 'St kC CLs'                      # which folder/sample group iterate
     INPUT_FOLDER   = f"data/{SAMPLES_NAME}"          # folder containing .txt map files
     OUTPUT_FOLDER  = f"figures/maps/{SAMPLES_NAME}/{MAP_MODE}"  # where to save
-    REGION         = (40, 1785)                      # spectral crop range (cm^-1)
+    REGION         = (250, 1785)                      # spectral crop range (cm^-1)
     WIN_LEN        = 15                              # Savitzky-Golay window length
     N_CLUSTERS     = 4                               # number of clusters for k-means
     PCA_COMPONENTS = 3                               # number of PCA components to plot

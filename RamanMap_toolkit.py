@@ -454,23 +454,30 @@ def sum_intensity(image: rp.SpectralImage,
 
 
 def plot_topography(image: rp.SpectralImage,
-                    title: str = "Raman Map - Total Intensity") -> None:
+                    title: str,
+                    figsize: tuple,
+                    colormap: str,
+                    im_filter: str) -> None:
     """
     Display the total intensity topography map with styled colorbar.
 
+    :param colormap:
+    :param figsize:
+    :param im_filter: Interpolation param to filter the imshow
+    :type im_filter: str
     :param image: SpectralImage instance.
     :type image: rp.SpectralImage
     :param title: Figure title.
-    :type title: str
+    :type title: str 
     """
 
-    ax = config_figure(title, (2400, 2400))
+    ax = config_figure(title, figsize)
     topo = sum_intensity(image)
 
     im = ax.imshow(
         topo,
-        cmap='magma',
-        interpolation='nearest',
+        cmap=colormap,
+        interpolation=im_filter,
         origin='upper',
         aspect='equal')
     scale_ticks(ax)
@@ -515,16 +522,14 @@ def extract_band(image: rp.SpectralImage,
 
 
 def plot_band(image: rp.SpectralImage,
-              center: float,
-              width: float = 10,
-              title: str = None,
-              figsize: tuple = (2500, 2500),
-              cmap: str = 'inferno',
-              method: str = 'mean',
-              compensation: str = 'raw') -> None:
+              center: float, width: float = 10,
+              title: str = None, figsize: tuple = (2500, 2500),
+              cmap: str = 'inferno', im_filter: str = 'nearest',
+              method: str = 'mean', compensation: str = 'raw') -> None:
     """
     Plot a single Raman band map, with optional compensation by topography difference.
 
+    :param im_filter:
     :param image: SpectralImage instance.
     :type image: rp.SpectralImage
     :param center: Center wavenumber.
@@ -559,7 +564,13 @@ def plot_band(image: rp.SpectralImage,
         clipped = np.clip(smooth, -0.1, +0.1)
         band_img = normalize(clipped)
 
-    im = ax.imshow(normalize(band_img), cmap=cmap, origin='upper', interpolation='bilinear')
+    if compensation == 'ratio':
+        topo = sum_intensity(image, method=method)
+
+        ratio = band_img / (topo + 1e-6)
+        band_img = normalize(ratio)
+
+    im = ax.imshow(normalize(band_img), cmap=cmap, origin='upper', interpolation=im_filter)
     scale_ticks(ax)
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     config_bar(cbar)
