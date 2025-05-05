@@ -131,7 +131,7 @@ def plot_outlier_mask(array: np.ndarray,
 
     mask = detect_outliers(array, threshold=1.5)
 
-    ax = config_figure(f'{title} ({mask.sum()}/{mask.size})', figsize)
+    ax = config_figure(f'{title} ({mask.sum()}/{mask.size} = {100 * mask.sum()/mask.size:.1f}%)', figsize)
     im = ax.imshow(mask, cmap='gray', origin='upper')
     scale_ticks(ax)
 
@@ -202,7 +202,7 @@ def normalize_robust(array: np.ndarray,
     return (clipped - lo) / (hi - lo)
 
 
-def detect_outliers(data: np.ndarray, threshold: float = 1.) -> np.ndarray:
+def detect_outliers(data: np.ndarray, threshold: float = 3) -> np.ndarray:
     """
     Identify outliers using Z-score thresholding.
 
