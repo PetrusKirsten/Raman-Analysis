@@ -111,7 +111,32 @@ def scale_ticks(ax,
     ax.set_ylabel("y (µm)", color='whitesmoke', weight='bold')
 
 
-# Outlier Mask Plotting Utility
+def apply_alpha_mask(rgb: np.ndarray,
+                     channel_thresholds: tuple[float, float, float]
+                    ) -> np.ndarray:
+    """
+    Given an RGB image (h×w×3) and a threshold per channel,
+    returns an RGBA image where pixels with ALL channels below
+    their respective thresholds become transparent (α=0).
+
+    :param rgb: Input RGB image, values between 0–1, shape (h, w, 3).
+    :param channel_thresholds: Tuple of (thr_r, thr_g, thr_b).
+    :return: RGBA image, shape (h, w, 4).
+    """
+    h, w, _ = rgb.shape
+    thr_r, thr_g, thr_b = channel_thresholds
+
+    # máscara onde todos os canais < seus thresholds
+    mask = (rgb[...,0] < thr_r) & (rgb[...,1] < thr_g) & (rgb[...,2] < thr_b)
+
+    # monta canal alpha
+    alpha = np.ones((h, w), dtype=float)
+    alpha[mask] = 0.0
+
+    # empacota RGBA
+    rgba = np.dstack((rgb, alpha))
+    return rgba
+
 
 def plot_outlier_mask(array: np.ndarray,
                       title: str = "Outlier Mask",
@@ -129,7 +154,7 @@ def plot_outlier_mask(array: np.ndarray,
     :type method: str
     """
 
-    mask = detect_outliers(array, threshold=1.5)
+    mask = detect_outliers(array)
 
     ax = config_figure(f'{title} ({mask.sum()}/{mask.size} = {100 * mask.sum()/mask.size:.1f}%)', figsize)
     im = ax.imshow(mask, cmap='gray', origin='upper')
@@ -439,16 +464,10 @@ def sum_intensity(image: rp.SpectralImage,
     :rtype: np.ndarray
     """
 
-    def show_outliers():
-        mask = detect_outliers(total)
-        print("Total pixels:", total.size, "Outliers:", mask.sum())
-        plt.figure()
-        plt.imshow(mask, cmap='gray', origin='lower')
-        plt.title("Outlier Mask")
-        plt.show()
 
     total = np.sum(image.spectral_data, axis=2)
     total = correct_outliers(total, method=method)
+
     # return normalize(total)
     return normalize_robust(total, low_pct=2, high_pct=98)
 
@@ -518,7 +537,7 @@ def extract_band(image: rp.SpectralImage,
     band = np.sum(image.spectral_data[:, :, i0:i1+1], axis=2)
     band = correct_outliers(band, method=method)
 
-    return normalize(band)
+    return normalize_robust(band)
 
 
 def plot_band(image: rp.SpectralImage,
@@ -576,6 +595,63 @@ def plot_band(image: rp.SpectralImage,
     config_bar(cbar)
     plt.tight_layout()
 
+
+def collect_band_values(images, center, width=10, method='mean'):
+    """Coleta todas as bandas extraídas (sem normalização) de uma lista de imagens."""
+    all_bands = []
+    for image in images:
+        raw_band = extract_band(image, center=center, width=width, method=method)
+        all_bands.append(raw_band)
+    return all_bands
+
+
+def plot_band_global_norm(image: rp.SpectralImage,
+                          center: float,
+                          width: float,
+                          global_max: float,
+                          title: str = None,
+                          figsize: tuple = (2500, 2500),
+                          cmap: str = 'inferno',
+                          method: str = 'mean',
+                          compensation: str = 'raw') -> None:
+    """
+    Plot a single Raman band with global normalization and optional topography compensation.
+
+    :param image: SpectralImage instance.
+    :param center: Center wavenumber of the band.
+    :param width: Bandwidth (± from center).
+    :param global_max: Reference max value for normalization.
+    :param title: Plot title.
+    :param figsize: Size of the figure in pixels.
+    :param cmap: Colormap to use.
+    :param method: Outlier correction method.
+    :param compensation: 'raw' or 'diff'.
+    """
+
+    from scipy.ndimage import gaussian_filter
+
+    ax = config_figure(title, figsize)
+
+    band_img = extract_band(image, center, width, method=method)
+
+    if compensation == 'diff':
+        topo = sum_intensity(image, method=method)
+        diff = band_img - topo
+        mask = topo > np.percentile(topo, 5)
+        diff[~mask] = 0
+        band_img = gaussian_filter(diff, sigma=0.9)
+
+    band_img = np.clip(band_img, 0, global_max) / global_max
+
+    im = ax.imshow(band_img, cmap=cmap, origin='upper', interpolation='nearest')
+    scale_ticks(ax)
+    cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    config_bar(cbar)
+    plt.tight_layout()
+
+
+
+
 # --------------------------------------
 # Visualization: Multiband RGB
 # --------------------------------------
@@ -623,9 +699,11 @@ def plot_multiband(image: rp.SpectralImage,
         rgb[...,2] += band_img * cb
 
     rgb = np.clip(rgb, 0, 1)
+    thresholds = (0.67, 0.67, 0.67)  # ajusta pra teus dados!
+    rgba = apply_alpha_mask(rgb, thresholds)
 
     ax = config_figure(f"RGB Bands {bands}", figsize, face='#1d1e24', edge='white')
-    ax.imshow(rgb, origin='upper')
+    ax.imshow(rgba, origin='upper')
     scale_ticks(ax)
     plt.axis('off')
     plt.tight_layout()

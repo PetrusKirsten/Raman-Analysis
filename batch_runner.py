@@ -20,10 +20,31 @@ import matplotlib.pyplot as plt
 
 from RamanMap_toolkit import sum_intensity
 
-
 # --------------------------------------
 # Batch Processing Function
 # --------------------------------------
+
+def save_params(params: dict, output_folder: Path, filename: str):
+    """
+    Save run parameters to a text file.
+
+    :param params: dict of {param_name: value}
+    :param output_folder: Path where to write the file
+    :param filename: name of the output file
+    """
+
+    fp = output_folder / filename
+
+    with open(fp, 'w', encoding='utf-8') as f:
+
+        f.write("RamanMap Batch Run Parameters\n")
+        f.write("=============================\n\n")
+
+        for k, v in params.items():
+            f.write(f"{k:15s}: {v}\n")
+
+
+
 def batch_process(input_folder: str, output_folder: str):
     """
     Execute batch processing for all Raman map files in input_folder.
@@ -52,15 +73,13 @@ def batch_process(input_folder: str, output_folder: str):
             fmt='[%(asctime)s] %(levelname)s: %(message)s',
             datefmt='%H:%M:%S',
             level_styles={
-                'info': {'color': 'green'},
+                'info': {'color': 'white', 'bold': True},
                 'warning': {'color': 'yellow'},
                 'error': {'color': 'red', 'bold': True},
-                'critical': {'color': 'red', 'bold': True, 'background': 'white'},
-            },
+                'critical': {'color': 'red', 'bold': True, 'background': 'white'}},
             field_styles={
                 'asctime': {'color': 'blue'},
-                'levelname': {'color': 'white', 'bold': True},
-            }
+                'levelname': {'color': 'white', 'bold': True}}
         )
 
         return logger
@@ -73,20 +92,36 @@ def batch_process(input_folder: str, output_folder: str):
         return input_path, output_path, svg_path
 
     log = log_config()
+
     log.info(f"Initializing..."); time.sleep(1)
     log.info(f"Running for '{SAMPLES_NAME}'!"); time.sleep(1)
-    log.info(f"Checking paths and folders..."); time.sleep(1)
-    log.info(f"INPUT_FOLDER: {INPUT_FOLDER} OK! "); time.sleep(.5)
-    log.info(f"OUTPUT_FOLDER: {OUTPUT_FOLDER} OK!"); time.sleep(.5)
+    log.info(f"Region to crop the spectra: {REGION[0]} to {REGION[1]} 1/cm."); time.sleep(.5)
+    log.info(f"Creating {MAP_MODE} maps."); time.sleep(.5)
+    log.info(f"Applying {IMAGE_FILTER} filter to the images."); time.sleep(.5)
+    log.info(f"Checking paths and folders..."); time.sleep(.5)
+    log.info(f"Input folder: '{INPUT_FOLDER}' OK! "); time.sleep(.5)
+    log.info(f"Output folder: '{OUTPUT_FOLDER}' OK!"); time.sleep(.5)
+
     in_folder, out_folder, svg_folder = folders_config()
+
+    # write and save the parameters of this exe
+    run_params = {
+        "MAP MODE": MAP_MODE,
+        "REGION (in 1/cm)": REGION,
+        "BACKGROUND REMOVED?": "NO" if REMOVE_BG == 'w-bg' else "YES",
+        "WINDOW LENGTH FOR SAVGOL FILTER": WIN_LEN,
+        "BANDS ANALYSED": BANDS,
+    }
+    log.info(f"Saving run parameters as '{SAMPLES_NAME}_run_params.txt'..."); time.sleep(.5)
+    save_params(run_params, out_folder, f"{SAMPLES_NAME}_run_params.txt")
 
     # 1) Discover and load all map files
     raw_maps = []
     map_files = [f for f in in_folder.glob("*.txt") if "Map" in f.name]
 
-    log.info(f"Found {len(map_files)} map files:"); time.sleep(1)
+    log.info(f"Found {len(map_files)} map files:"); time.sleep(.5)
     for f in map_files:
-        print(f'\t\t\t\t→ {f.base()}')
+        print(f'\t\t→ {f.name}')
     time.sleep(.5)
     for f in tqdm(map_files, desc="Loading maps", unit="file"):
         raw_maps.append(rm.load_file(str(f)))
@@ -136,7 +171,7 @@ def batch_process(input_folder: str, output_folder: str):
         rm.plot_topography(
             topo_proc,
             title=f"{topo_title} - Topography", figsize=(2500, 2500),
-            colormap='magma', im_filter='nearest')
+            colormap='bone', im_filter=IMAGE_FILTER)
 
         png_path = out_folder / f"{topo_base}_topography.png"
         plt.gcf().savefig(png_path, dpi=300)
@@ -146,46 +181,121 @@ def batch_process(input_folder: str, output_folder: str):
 
         plt.close()
 
-    def run_bands(bands_proc, bands_base, bands_title):
-        """Generate and save individual band maps."""
+    # def run_bands(bands_proc, bands_base, bands_title):
+    #     """Generate and save individual band maps."""
+    #
+    #     # ratio compensation
+    #     for center, width, label in BANDS:
+    #         rm.plot_band(
+    #             bands_proc,
+    #             center=center,
+    #             width=width,
+    #             title=f"{bands_title} - {label}",
+    #             cmap='PiYG',
+    #             method='mean',
+    #             im_filter=IMAGE_FILTER,
+    #             compensation='ratio')
+    #
+    #         png_path = out_folder / f"{bands_base}_{center}_spectrum_ratio.png"
+    #         plt.gcf().savefig(png_path, dpi=300)
+    #
+    #         svg_path = svg_folder / f"{bands_base}_{center}_spectrum_ratio.svg"
+    #         plt.gcf().savefig(svg_path, dpi=300)
+    #
+    #         plt.close()
+    #
+    #     # subtraction compensation
+    #     for center, width, label in BANDS:
+    #         rm.plot_band(
+    #             bands_proc,
+    #             center=center,
+    #             width=width,
+    #             title=f"{bands_title} - {label}",
+    #             cmap='plasma',
+    #             method='mean',
+    #             im_filter=IMAGE_FILTER,
+    #             compensation='diff')
+    #
+    #         png_path = out_folder / f"{bands_base}_{center}_spectrum_sub.png"
+    #         plt.gcf().savefig(png_path, dpi=300)
+    #
+    #         svg_path = svg_folder / f"{bands_base}_{center}_spectrum_sub.svg"
+    #         plt.gcf().savefig(svg_path, dpi=300)
+    #
+    #         plt.close()
+    #
+    #     # raw
+    #     for center, width, label in BANDS:
+    #         rm.plot_band(
+    #             bands_proc,
+    #             center=center,
+    #             width=width,
+    #             title=f"{bands_title} - {label}",
+    #             cmap='pink',
+    #             method='mean',
+    #             im_filter=IMAGE_FILTER,
+    #             compensation='raw')
+    #
+    #         png_path = out_folder / f"{bands_base}_{center}_spectrum_raw.png"
+    #         plt.gcf().savefig(png_path, dpi=300)
+    #
+    #         svg_path = svg_folder / f"{bands_base}_{center}_spectrum_raw.svg"
+    #         plt.gcf().savefig(svg_path, dpi=300)
+    #
+    #         plt.close()
 
-        # compensated
+    def run_bands(proc, base, title, global_max):
+        """Generate and save globally normalized band maps (raw + diff)."""
+
         for center, width, label in BANDS:
-            rm.plot_band(
-                bands_proc,
-                center=center,
-                width=width,
-                title=f"{bands_title} - {label}",
-                cmap='inferno',
-                method='median',
-                compensation='diff')
 
-            png_path = out_folder / f"{bands_base}_spectrum_diff.png"
-            plt.gcf().savefig(png_path, dpi=300)
+            with_st = 'St' in title
+            with_kc = 'kC' in title
+            with_ic = 'iC' in title
 
-            svg_path = svg_folder / f"{bands_base}_spectrum_diff.svg"
-            plt.gcf().savefig(svg_path, dpi=300)
+            if center == 480 and not with_st:
+                continue
 
-            plt.close()
+            if center == 805 and not with_ic:
+                continue
 
-        # raw
-        for center, width, label in BANDS:
-            rm.plot_band(
-                bands_proc,
-                center=center,
-                width=width,
-                title=f"{bands_title} - {label}",
-                cmap='inferno',
-                method='median',
-                compensation='raw'
+            if center == 850 and not with_kc:
+                continue
+
+            if center == 941 and not with_st:
+                continue
+
+            if center == 1220 and not with_st:
+                continue
+
+            # RAW (global)
+            rm.plot_band_global_norm(
+                proc,
+                title=f"{title} - {label}",
+                center=center, width=width,
+                global_max=global_max[center],
+                compensation='raw',
+                cmap='plasma'
             )
 
-            png_path = out_folder / f"{bands_base}_spectrum_raw.png"
-            plt.gcf().savefig(png_path, dpi=300)
+            filename = out_folder / f"{base}_band_{center}_raw_global"
+            plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+            plt.gcf().savefig(svg_folder / filename.with_suffix('.svg').name, dpi=300)
+            plt.close()
 
-            svg_path = svg_folder / f"{bands_base}_spectrum_raw.svg"
-            plt.gcf().savefig(svg_path, dpi=300)
+            # DIFF (global)
+            rm.plot_band_global_norm(
+                proc,
+                title=f"{title} - {label}",
+                center=center, width=width,
+                global_max=global_max[center],
+                compensation='diff',
+                cmap='plasma'
+            )
 
+            filename = out_folder / f"{base}_band_{center}_diff_global"
+            plt.gcf().savefig(filename.with_suffix('.png'), dpi=300)
+            plt.gcf().savefig(svg_folder / filename.with_suffix('.svg').name, dpi=300)
             plt.close()
 
     def run_multibands(multi_proc, multi_base, multibands_title):
@@ -275,6 +385,21 @@ def batch_process(input_folder: str, output_folder: str):
 
         plt.close()
 
+
+    # 3a) Coletar mapas de banda para normalização global
+    log.info("Collecting band values for global normalization...")
+    band_values = {center: [] for center, _, _ in BANDS}
+
+    for proc in proc_maps:
+
+        for center, width, _ in BANDS:
+            band_map = rm.extract_band(proc, center=center, width=width, method='mean')
+            band_values[center].append(band_map)
+
+    # Calcular máximo global por banda
+    global_max = {center: np.max(np.stack(band_values[center])) for center in band_values}
+    log.info("Global normalization maxima computed for each band.")
+
     # 4) Iterate over each preprocessed map and generate selected plots
     for txt_file, proc in zip(map_files, proc_maps):
 
@@ -283,24 +408,24 @@ def batch_process(input_folder: str, output_folder: str):
         base = raw_stem.replace(" ", "_")
         axis_title = raw_stem
 
-        log.info(f"\n→ Generating figures for {txt_file.name}:"); time.sleep(1)
+        log.info(f"→ Generating figures for {txt_file.name}:"); time.sleep(.5)
 
-        log.info("Plotting spectra..."); time.sleep(.5)
+        log.info("Plotting spectra..."); time.sleep(0)
         run_spectra(base, axis_title)
 
-        log.info("Plotting outliers map..."); time.sleep(.5)
-        run_outliers(proc, base, axis_title, method='mean')
-
-        log.info("Plotting final map histogram..."); time.sleep(.5)
-        run_histogram(proc, base, axis_title)
+        # log.info("Plotting outliers map..."); time.sleep(0)
+        # run_outliers(proc, base, axis_title, method='mean')
+        #
+        # log.info("Plotting final map histogram..."); time.sleep(0)
+        # run_histogram(proc, base, axis_title)
 
         if MAP_MODE == 'topography':
-            log.info("Plotting topography map..."); time.sleep(.5)
+            log.info("Plotting topography map..."); time.sleep(0)
             run_topography(proc, base, axis_title)
 
         elif MAP_MODE == 'bands':
-            log.info("Plotting bands map...")
-            run_bands(proc, base, axis_title)
+            log.info("Plotting band maps with global normalization...")
+            run_bands(proc, base, axis_title, global_max)
 
         elif MAP_MODE == 'multi':
             log.info("Plotting multibands map...")
@@ -317,26 +442,40 @@ def batch_process(input_folder: str, output_folder: str):
         else:
             print(f"MAP_MODE must be 'topography', 'bands', 'multi', 'k', or 'pca'.")
 
-        log.info(f"{txt_file.name} figures done!"); time.sleep(1)
+        log.info(f"{txt_file.name} figures done!\n"); time.sleep(1)
 
-    log.info(f"\n→ Done! All maps were saved in {out_folder.resolve()}")
+    log.info(f"→ Done! All maps were saved in {out_folder.resolve()}")
 
 
 if __name__ == "__main__":
 
     # Batch Parameters (adjust as needed)
-    MAP_MODE       = 'topography'                    # choose the mode to the maps
-    SAMPLES_NAME   = 'St kC CLs'                      # which folder/sample group iterate
-    INPUT_FOLDER   = f"data/{SAMPLES_NAME}"          # folder containing .txt map files
-    OUTPUT_FOLDER  = f"figures/maps/{SAMPLES_NAME}/{MAP_MODE}"  # where to save
-    REGION         = (250, 1785)                      # spectral crop range (cm^-1)
-    WIN_LEN        = 15                              # Savitzky-Golay window length
-    N_CLUSTERS     = 4                               # number of clusters for k-means
-    PCA_COMPONENTS = 3                               # number of PCA components to plot
-    BANDS          = [                               # list of (center, width, label) for band maps
-        (951, 10, "951 cm$^{-1}$"),
-        (850, 10, "850 cm$^{-1}$"),
-        (550, 20, "550 cm$^{-1}$"),
-    ]
+    # for name in ['St iC CLs']:
+    for name in ['St kC CLs', 'St iC CLs', 'Carrageenans']:
+        for mode in ['topography', 'bands']:
+            if mode == 'topography':
+                continue
+            for init_cut in [40]:
+                for filtering in ['nearest']:
 
-    batch_process(INPUT_FOLDER, OUTPUT_FOLDER)
+                    SAMPLES_NAME   = name  # which folder/sample group iterate
+                    MAP_MODE       = mode  # choose the mode to the maps
+                    REMOVE_BG      = 'w-bg'  # remove the background from spectra
+                    IMAGE_FILTER   = filtering  # filter mode to apply into the final image
+                    REGION         = (init_cut, 1785)  # spectral crop range (cm^-1)
+                    WIN_LEN        = 15  # Savitzky-Golay window length
+                    N_CLUSTERS     = 4  # number of clusters for k-means
+                    PCA_COMPONENTS = 3  # number of PCA components to plot+
+                    BANDS          = [  # list of (center, width, label) for band maps
+                        (480, 10, "C–O–C 480 cm$^{-1}$ (starch)"),
+                        (550, 20, "Ca$^{2+}$ 550 cm$^{-1}$ (cross-linking)"),
+                        (805, 10, "iC 805 cm$^{-1}$"),
+                        (850, 10, "kC 850 cm$^{-1}$"),
+                        (941, 10, "C–O 941 cm$^{-1}$ (starch)"),
+                        (1220, 10, "S=O 1220 cm$^{-1}$"),
+                    ]
+
+                    INPUT_FOLDER   = f"data/{SAMPLES_NAME}"  # folder containing .txt map files
+                    OUTPUT_FOLDER  = f"figures/maps/{SAMPLES_NAME}/{MAP_MODE}_{REGION[0]}to{REGION[1]}_{REMOVE_BG}_{IMAGE_FILTER}"  # where to save
+
+                    batch_process(INPUT_FOLDER, OUTPUT_FOLDER)
