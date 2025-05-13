@@ -67,9 +67,9 @@ def run_pca(data_folder="./data"):
         # plot_pca_scree(pca_model, title="PCA Variance Explained")
         
         spectral_axis = spectra_final[0].spectral_axis
-        for n in range(len(loadings)):
-            plot_pca_loadings_with_peaks(loadings, spectral_axis, pc=n+1, n_peaks=8)
-            plot_pca_loadings(loadings, spectral_axis, pc=n+1, title="PCA Loading Plot")
+        # for n in range(len(loadings)):
+        #     plot_pca_loadings_with_peaks(loadings, spectral_axis, pc=n+1, n_peaks=8)
+        #     plot_pca_loadings(loadings, spectral_axis, pc=n+1, title="PCA Loading Plot")
 
     else:
         print("⚠️ Dataset insuficiente para PCA (mínimo = 2 amostras).")

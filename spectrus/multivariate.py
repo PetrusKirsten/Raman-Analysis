@@ -33,7 +33,7 @@ def compute_pca(spectra_list: list, n_components: int = 2):
     return scores, loadings, pca
 
 def plot_pca(scores, pca_model, labels=None,
-            title="PCA Score Plot", size=(3500, 3000),
+            title="PCA Score Plot", size=(3000, 2750),
             save=False, save_path="pca_plot.png"):
     """
     PCA score plot with explained variance using toolkit style.
@@ -43,31 +43,38 @@ def plot_pca(scores, pca_model, labels=None,
     ax = config_figure(title, size)
 
     for i in range(scores.shape[0]):
-
         label = labels[i] if labels else f"S{i+1}"
+        if 'kC' in label:
+            color = 'crimson'
+        elif 'iC' in label:
+            color = 'dodgerblue'
+        else:
+            color = 'gold'
+
         ax.scatter(scores[i, 0], scores[i, 1],
-                   edgecolor='black', s=70, label=label,
-                   color=f"C{i}", zorder=3)
+                   color=color, edgecolor='black', 
+                   s=135, linewidths=.75, alpha=.75,
+                   label=label,
+                   zorder=3)
 
         ax.annotate(label,
                     xy=(scores[i, 0], scores[i, 1]),
-                    xytext=(5, 5),
+                    xytext=(8, 8),
                     textcoords="offset points",
-                    fontsize=10)
+                    fontsize=12)
 
-    ax.axhline(0, color='gray', linewidth=0.8, linestyle='--')
-    ax.axvline(0, color='gray', linewidth=0.8, linestyle='--')
+    max_x, max_y = np.max(np.abs(scores[:, 0])) * 1.1, np.max(np.abs(scores[:, 1])) * 1.1
 
-    ax.set_xlabel(f"PC1 ({explained[0]:.1f}%)")
-    ax.set_ylabel(f"PC2 ({explained[1]:.1f}%)")
-    ax.legend()
-
+    ax.axhline(0, color='gray', alpha=.5, lw=.8, ls='-', zorder=-1)
+    ax.axvline(0, color='gray', alpha=.5, lw=.8, ls='-', zorder=-1)
+    
+    ax.set_xlim(-max_x, max_x); ax.set_ylim(-max_y, max_y)
+    ax.set_xlabel(f"PC1 ({explained[0]:.1f}%)"); ax.set_ylabel(f"PC2 ({explained[1]:.1f}%)")
     plt.tight_layout()
 
+    plt.show()
     if save:
         plt.savefig(save_path, dpi=300)
-
-    plt.show()
 
 def plot_pca_scree(pca_model, title="PCA Scree Plot", size=(4000, 1500)):
     """
