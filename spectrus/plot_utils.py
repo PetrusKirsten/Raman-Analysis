@@ -1,5 +1,3 @@
-# raman/plot_utils.py
-
 import numpy as np
 import ramanspy as rp
 import matplotlib.pyplot as plt
@@ -201,9 +199,9 @@ def plot_stacked(spectra: list,
 
 
 def plot_area(areas_dict: dict,
-                         title: str = "Band Area Comparison",
-                         color: str = "deepskyblue",
-                         size: tuple = (2000, 1500)):
+                title: str = "Band Area Comparison",
+                color: str = "deepskyblue",
+                size: tuple = (2000, 1500)):
     
     """
     Plot a bar chart comparing band areas across samples.

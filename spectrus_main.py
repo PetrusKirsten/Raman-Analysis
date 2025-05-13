@@ -1,10 +1,9 @@
 import os
-
 from spectrus.io import load_spectrum
 from spectrus.plot_utils import set_font
 from spectrus.utils import combine_spectra
-from spectrus.preprocessing import preprocess, preprocess_batch
-from spectrus.multivariate import compute_pca, plot_pca, plot_pca_scree, plot_pca_loadings, plot_pca_loadings_with_peaks
+from spectrus.preprocessing import preprocess_batch
+from spectrus.multivariate import compute_pca, plot_pca, plot_pca_scree, plot_pca_loadings, compute_kmeans, plot_clusters
 
 def run_pca(data_folder="./data"):
 
@@ -64,12 +63,17 @@ def run_pca(data_folder="./data"):
 
         # Plots
         plot_pca(scores, pca_model, labels=labels_final, title="PCA Score Plot")
-        # plot_pca_scree(pca_model, title="PCA Variance Explained")
+
+        plot_pca_scree(pca_model, title="PCA Variance Explained")
         
         spectral_axis = spectra_final[0].spectral_axis
-        # for n in range(len(loadings)):
-        #     plot_pca_loadings_with_peaks(loadings, spectral_axis, pc=n+1, n_peaks=8)
-        #     plot_pca_loadings(loadings, spectral_axis, pc=n+1, title="PCA Loading Plot")
+        for n in range(len(loadings)):
+            plot_pca_loadings(loadings, spectral_axis, pc=n+1)
+            pass
+
+        cluster_labels, kmeans_model = compute_kmeans(scores, n_clusters=3)
+        plot_pca(scores, pca_model, labels=labels_final, title="PCA Score Plot + Clusters", kmeans_model=kmeans_model)
+
 
     else:
         print("⚠️ Dataset insuficiente para PCA (mínimo = 2 amostras).")

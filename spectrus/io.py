@@ -1,5 +1,3 @@
-# raman/io.py
-
 import pandas as pd
 import ramanspy as rp
 

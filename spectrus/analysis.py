@@ -1,5 +1,3 @@
-# raman/analysis.py
-
 import numpy as np
 import ramanspy as rp
 from scipy.signal import find_peaks

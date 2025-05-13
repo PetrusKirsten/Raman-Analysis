@@ -1,5 +1,3 @@
-# raman/preprocessing.py
-
 import ramanspy as rp
 
 def preprocess(spectrum: rp.Spectrum,
