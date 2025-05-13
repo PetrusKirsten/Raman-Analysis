@@ -4,6 +4,8 @@ import numpy as np
 import ramanspy as rp
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from spectrus.analysis import get_peaks
+
 
 def set_font(font_path: str):
 
@@ -78,42 +80,58 @@ def config_figure(fig_title: str, size: tuple) -> plt.Axes:
     return ax
 
 
-def plot_spectra(spectra: list,
-                 labels: list = None,
-                 title: str = "Raman Spectra Comparison",
-                 size: tuple = (4500, 2000),
-                 linewidth: float = 1.5):
-
+def plot_spectrum(spectrum: rp.Spectrum,
+                  title: str = "Raman Spectrum",
+                  size: tuple = (4500, 2000),
+                  color: str = "crimson",
+                  linewidth: float = 1.5,
+                  highlight_peaks: bool = True,
+                  peak_prominence: float = 10):
     """
-    Plot multiple RamanSPy spectra on the same plot.
+    Plot a single Spectrum with optional peak highlighting.
 
     Parameters
     ----------
-    spectra : list of rp.Spectrum
-        List of spectra to plot.
-    labels : list of str
-        List of labels for legend.
+    spectrum : rp.Spectrum
+        Spectrum to plot.
     title : str
-        Title of the plot.
+        Plot title.
     size : tuple
-        Figure size in pixels.
+        Figure size.
+    color : str
+        Line color.
     linewidth : float
-        Thickness of lines.
+        Line thickness.
+    highlight_peaks : bool
+        Whether to detect and annotate peaks.
+    peak_prominence : float
+        Minimum prominence of peaks to detect (if highlight_peaks=True).
     """
-
+    
     ax = config_figure(title, size)
+
+    x = spectrum.spectral_axis
+    y = spectrum.spectral_data
 
     ax.set_xlabel("Raman Shift (cm$^{-1}$)")
     ax.set_ylabel("Intensity")
 
-    for i, spectrum in enumerate(spectra):
-        label = labels[i] if labels else f"Spectrum {i+1}"
-        ax.plot(
-            spectrum.spectral_axis, spectrum.spectral_data,
-            color=f"C{i}", lw=linewidth, alpha=0.75,
-            label=label)
+    ax.plot(x, y, color=color, lw=linewidth)
 
-    ax.legend()
+    if highlight_peaks:
+        peak_pos, peak_int = get_peaks(spectrum, prominence=peak_prominence)
+
+        ax.plot(peak_pos, peak_int, "ro", label="Peaks")
+
+        for xp, yp in zip(peak_pos, peak_int):
+            ax.annotate(f"{xp:.0f}",
+                        xy=(xp, yp),
+                        xytext=(0, 5),
+                        textcoords="offset points",
+                        ha="center",
+                        fontsize=10,
+                        color="red")
+    
     plt.tight_layout()
     plt.show()
 
@@ -123,7 +141,9 @@ def plot_stacked(spectra: list,
                  title: str = "Stacked Raman Spectra",
                  size: tuple = (4500, 2000),
                  linewidth: float = 1.5, transp: float = 0.75,
-                 offset_step: float = 1.):
+                 offset_step: float = 1.,
+                 highlight_peaks: bool = True,
+                 peak_prominence: float = 10):
 
     """
     Plot stacked Raman spectra with vertical offset.
@@ -142,23 +162,77 @@ def plot_stacked(spectra: list,
         Thickness of lines.
     offset_step : float
         Vertical offset between spectra (in normalized units).
+    highlight_peaks : bool
+        If True, mark detected peaks on spectra.
+    peak_prominence : float
+        Prominence threshold for peak detection.
     """
 
     ax = config_figure(title, size)
 
-    ax.set_xlabel("Raman Shift (cm⁻¹)")
-    ax.set_ylabel("Intensity + offset")
+    ax.set_xlabel("Raman Shift (cm$^{-1}$)")
+    ax.set_ylabel("Intensity")
 
     for i, spectrum in enumerate(spectra):
-        x = spectrum.spectral_axis
-        y = spectrum.spectral_data
+       
+        x, y = spectrum.spectral_axis, spectrum.spectral_data
         offset = i * offset_step * (np.max(y) - np.min(y))
         label = labels[i] if labels else f"Spectrum {i+1}"
 
-        ax.plot(x, y + offset,
-                lw=linewidth, color=f"C{i}", alpha=transp,
-                label=label,)
+        ax.plot(x, y + offset, lw=linewidth, label=label, color=f"C{i}")
+
+        if highlight_peaks:
+            peak_pos, peak_int = get_peaks(spectrum, prominence=peak_prominence)
+
+            ax.plot(peak_pos, peak_int + offset, "ro", markersize=4)
+
+            for xp, yp in zip(peak_pos, peak_int):
+                ax.annotate(f"{xp:.0f}",
+                            xy=(xp, yp + offset),
+                            xytext=(0, 5),
+                            textcoords="offset points",
+                            ha="center",
+                            fontsize=8,
+                            color="red")
 
     ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_area(areas_dict: dict,
+                         title: str = "Band Area Comparison",
+                         color: str = "deepskyblue",
+                         size: tuple = (2000, 1500)):
+    
+    """
+    Plot a bar chart comparing band areas across samples.
+
+    Parameters
+    ----------
+    areas_dict : dict
+        Dictionary with labels as keys and area values.
+    title : str
+        Plot title.
+    color : str
+        Bar color.
+    size : tuple
+        Figure size in pixels.
+    """
+    
+    labels = list(areas_dict.keys())
+    values = list(areas_dict.values())
+
+    dpi = 300
+    w, h = size[0] / dpi, size[1] / dpi
+
+    fig, ax = plt.subplots(figsize=(w, h))
+    ax.bar(labels, values, color=color, edgecolor='black')
+
+    ax.set_title(title, weight='bold', pad=12)
+    ax.set_xlabel("Sample")
+    ax.set_ylabel("Area")
+    ax.tick_params(direction='out', length=4, width=.75, pad=8)
+
     plt.tight_layout()
     plt.show()

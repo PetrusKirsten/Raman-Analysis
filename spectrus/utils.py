@@ -1,5 +1,6 @@
 # raman/utils.py
 
+import os
 import numpy as np
 import pandas as pd
 import ramanspy as rp
@@ -69,3 +70,44 @@ def combine_spectra(spectra_list: list) -> rp.Spectrum:
     mean_intensity = np.mean(intensities, axis=0)
 
     return rp.Spectrum(mean_intensity, shifts[0])
+
+
+def filter_by_concentration(file_list, concentration):
+    """
+    Filter list of filenames to keep only those with a specific concentration.
+
+    Parameters
+    ----------
+    file_list : list of str
+        List of filenames.
+    concentration : str or int
+        Concentration value to search for (ex.: 7).
+
+    Returns
+    -------
+    filtered_files : list of str
+        List of filenames matching the concentration.
+    """
+    concentration = str(concentration)
+    return [f for f in file_list if f"CL {concentration}" in f and "Map" not in f]
+
+
+def filter_by_polymer(data_folder, polymer_group_name):
+    """
+    Get list of valid filenames from a specific polymer group folder.
+
+    Parameters
+    ----------
+    data_folder : str
+        Path to the main data folder.
+    polymer_group_name : str
+        Name of the polymer group folder.
+
+    Returns
+    -------
+    file_list : list of str
+        List of valid filenames.
+    """
+    group_path = os.path.join(data_folder, polymer_group_name)
+    return [f for f in os.listdir(group_path)
+            if os.path.isfile(os.path.join(group_path, f)) and "Map" not in f]
