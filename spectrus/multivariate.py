@@ -1,13 +1,18 @@
 import numpy as np
-from matplotlib import cm
-from scipy.stats import chi2
-import matplotlib.pyplot as plt
+
 from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+
+from scipy.stats import chi2
 from scipy.signal import find_peaks
 from scipy.spatial import ConvexHull
-from sklearn.decomposition import PCA
-from matplotlib.patches import Ellipse
+
 from spectrus.plot_utils import config_figure
+
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.patches import Ellipse
+from matplotlib.ticker import MultipleLocator, FixedLocator
 
 
 def compute_pca(spectra_list: list, n_components: int = 2):
@@ -38,10 +43,12 @@ def compute_pca(spectra_list: list, n_components: int = 2):
     
     return scores, loadings, pca
 
-def plot_pca(scores, pca_model, labels=None,
-            title="PCA Score Plot", size=(3000, 2750),
-            kmeans_model=None, show_hull=True, show_ellipse=True, ellipse_alpha=0.2, ellipse_conf=0.95,
-            save=False, save_path="./figures/pca_plot.png"):
+def plot_pca(
+        scores, pca_model, labels=None,
+        title="PCA Score Plot", size=(3000, 2750),
+        kmeans_model=None, show_hull=False, show_ellipse=False, ellipse_alpha=0.2, ellipse_conf=0.95,
+        save=True, save_path="./figures/pca_plot.png"):
+    
     """
     PCA score plot with explained variance using toolkit style.
     """
@@ -52,15 +59,15 @@ def plot_pca(scores, pca_model, labels=None,
     for i in range(scores.shape[0]):
         label = labels[i] if labels else f"S{i+1}"
         if 'kC' in label:
-            color = 'crimson'
+            color = 'hotpink'
         elif 'iC' in label:
-            color = 'dodgerblue'
+            color = '#62BDC1'
         else:
-            color = 'gold'
+            color = '#FFE138'
 
         ax.scatter(scores[i, 0], scores[i, 1],
                    color=color, edgecolor='black', 
-                   s=135, linewidths=.75, alpha=.75,
+                   s=100, linewidths=.75, alpha=.75,
                    label=label,
                    zorder=3)
 
@@ -70,10 +77,8 @@ def plot_pca(scores, pca_model, labels=None,
                     textcoords="offset points",
                     fontsize=12)
 
-    max_x, max_y = np.max(np.abs(scores[:, 0])) * 1.3, np.max(np.abs(scores[:, 1])) * 1.3
-
-    ax.axhline(0, color='gray', alpha=.5, lw=.8, ls='-', zorder=-1)
-    ax.axvline(0, color='gray', alpha=.5, lw=.8, ls='-', zorder=-1)
+    ax.axhline(0, color='gray', alpha=.5, lw=.8, ls='--', zorder=-1)
+    ax.axvline(0, color='gray', alpha=.5, lw=.8, ls='--', zorder=-1)
     
     if kmeans_model is not None:
         centers = kmeans_model.cluster_centers_
@@ -114,14 +119,16 @@ def plot_pca(scores, pca_model, labels=None,
                             facecolor=color, alpha=ellipse_alpha)
             ax.add_patch(ell)
 
+    max_x, max_y = np.max(np.abs(scores[:, :2])) * 1.3, np.max(np.abs(scores[:, :2])) * 1.3
     ax.set_xlim(-max_x, max_x); ax.set_ylim(-max_y, max_y)
     ax.set_xlabel(f"PC1 ({explained[0]:.1f}%)"); ax.set_ylabel(f"PC2 ({explained[1]:.1f}%)")
     plt.tight_layout()
-    plt.show()
     if save:
         plt.savefig(save_path, dpi=300)
 
-def plot_pca_scree(pca_model, title="PCA Scree Plot", size=(1500, 1500)):
+def plot_pca_scree(
+        pca_model, title="PCA Scree Plot", 
+        size=(1500, 1500), save=True, save_path="./figures/pca_scree.png"):
     """
     Plot Scree plot (variance explained by each PC).
     """
@@ -140,12 +147,16 @@ def plot_pca_scree(pca_model, title="PCA Scree Plot", size=(1500, 1500)):
     ax.set_ylim(0, max(explained) * 1.2)
 
     plt.tight_layout()
-    plt.show()
+     
+    if save:
+        plt.savefig(save_path, dpi=300)
 
-def plot_pca_loadings(loadings, spectral_axis,
-                      title="PCA Loading Plot with Peaks", size=(4000, 1500),
-                      pc=1, n_peaks=10, min_distance=5, prominence=0.01,
-                      save=False, save_path="./figures/pca_loadings"):
+def plot_pca_loadings(
+        loadings, spectral_axis,
+        title="PCA Loading Plot with Peaks", size=(4000, 1500),
+        pc=1, n_peaks=10, min_distance=5, prominence=0.01,
+        save=True, save_path="./figures/pca_loadings"
+    ):
     """
     Plot PCA loadings + highlight main peaks using real peak detection.
 
@@ -170,7 +181,7 @@ def plot_pca_loadings(loadings, spectral_axis,
     loading = loadings[pc_index]
 
     ax.plot(spectral_axis, loading, 
-            color='slategray', lw=1., alpha=.85,
+            color='slategray', lw=1.2, alpha=.75,
             zorder=3)
 
     peaks, _ = find_peaks(np.abs(loading), distance=min_distance, prominence=prominence)
@@ -183,7 +194,7 @@ def plot_pca_loadings(loadings, spectral_axis,
     peak_values = loading[top_indices]
 
     for x, y in zip(peak_positions, peak_values):
-        ax.axvline(x=x, color='palevioletred', linestyle='--', lw=.75, zorder=1)
+        ax.axvline(x=x, color='crimson', linestyle='--', lw=.5, alpha=.7, zorder=-1)
 
         ax.annotate(f"{int(x)}", xy=(x, y),
                     xytext=(0, 10 if y > 0 else -15), textcoords='offset points',
@@ -196,13 +207,21 @@ def plot_pca_loadings(loadings, spectral_axis,
 
     ax.axhline(0, color='gray', alpha=.5, lw=.75, ls='-', zorder=0)
 
-    ax.set_xlabel("Raman Shift (cm^{-1})")
-    ax.set_ylabel("Loading Value")
+    ax.set_xlabel("Raman shift (cm$^{-1}$)")
+    ax.set_ylabel("Loading value")
     ax.set_xlim((min(spectral_axis), max(spectral_axis)))
     ax.set_ylim((min(1.5*loading), max(1.5*loading)))
+    
+    start, stop, step = 300, 1800, 100
+    locs = np.arange(start, stop + step, step)
+    ax.xaxis.set_major_locator(FixedLocator(locs))
+    # ax.xaxis.set_major_locator(MultipleLocator(250)); 
+    ax.xaxis.set_minor_locator(MultipleLocator(20))
+    ax.tick_params(which='major', length=6); ax.tick_params(which='minor', length=3)
+
 
     plt.tight_layout()
-    plt.show()
+     
     if save:
         plt.savefig(save_path + f'{pc}.png', dpi=300)
 
@@ -295,6 +314,6 @@ def plot_clusters(scores: np.ndarray,
     ax.set_ylabel(ax.get_ylabel())  # mantém label de PC2
     ax.legend(loc='best', frameon=True)
     plt.tight_layout()
-    plt.show()
+     
     if save:
         plt.savefig(save_path, dpi=300)

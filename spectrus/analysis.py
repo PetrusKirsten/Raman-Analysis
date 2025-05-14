@@ -1,6 +1,10 @@
 import numpy as np
+import pandas as pd
 import ramanspy as rp
 from scipy.signal import find_peaks
+
+import matplotlib.pyplot as plt
+from typing import List, Dict, Tuple
 
 
 def extract_band(spectrum: rp.Spectrum, min_shift: float, max_shift: float) -> rp.Spectrum:
@@ -126,10 +130,11 @@ def get_peaks(spectrum: rp.Spectrum,
     return peak_positions, peak_intensities
 
 
-def compare_band_areas(spectra: list,
-                       labels: list,
-                       band_range: tuple) -> dict:
-    
+def compare_band_areas(
+        spectra: list,
+        labels: list,
+        band_range: tuple) -> dict:
+
     """
     Calculate and compare band areas across multiple spectra.
 
@@ -155,3 +160,116 @@ def compare_band_areas(spectra: list,
         areas[label] = area
 
     return areas
+
+def extract_band_areas(
+    spectra: List, 
+    labels: List[Tuple[str, float]],
+    bands: Dict[str, Tuple[float, float]]
+) -> pd.DataFrame:
+    """
+    Para cada espectro, calcula a área de cada banda definida.
+
+    Parameters
+    ----------
+    spectra : list of rp.Spectrum
+    labels : list of (group, conc)
+    bands : dict
+        {'nome da banda': (low_shift, high_shift), ...}
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        Colunas: group, conc, cada banda como coluna de área.
+    """
+    rows = []
+    for spec, (group, conc) in zip(spectra, labels):
+        row = {'group': group, 'conc': float(conc)}
+        for bname, (low, high) in bands.items():
+            row[bname] = calculate_peak_area(spec, low, high)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def plot_band_by_formulation(
+    df: pd.DataFrame, 
+    band: str, 
+    out_folder: str = None,
+    save: bool = False
+):
+    """
+    Plota área da banda vs concentração para cada group (St, kC, iC).
+
+    Parameters
+    ----------
+    df : DataFrame de extract_band_areas()
+    band : nome da coluna de banda ex. 'C–O–C (480)'
+    out_folder : pasta para salvar
+    save : se True, salva arquivo .png
+    """
+    from spectrus.plot_utils import config_figure, addLegend
+
+    ax = config_figure(f"{band}", (4*800, 4*600))
+    colors = {
+        "St": ['#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
+        "St kC": ['hotpink', 'mediumvioletred', '#A251C3', '#773AD1'],
+        "St iC": ['lightskyblue', '#62BDC1', '#31A887', '#08653A'],
+    }
+    for group, grp_df in df.groupby('group'):
+        # ordena pelo conc
+        grp_df = grp_df.sort_values('conc')
+        ax.plot(
+            grp_df['conc'], grp_df[band], 
+            marker='o', color=colors[group][1], linestyle='-',
+            lw=.75, markersize=9, mec=colors[group][1], mfc='w', alpha=1.,
+            label=group,
+        )
+
+    ax.set_xlabel("CaCl$_2$ concentration (mM)")
+    ax.set_ylabel(f"Area under peak")
+    ax.set_title(f"{band}" + " cm$^{-1}$")
+    ax.set_xticks([0, 7, 14, 21])
+    addLegend(ax)
+    plt.tight_layout()
+
+    if save and out_folder:
+        plt.savefig(f"{out_folder}/band_{band.replace(' ','_')}.png", dpi=300)
+    plt.show()
+
+
+def plot_all_bands(
+    df: pd.DataFrame,
+    bands: List[str],
+    out_folder: str = None,
+    save: bool = False
+):
+    """
+    Gera um subplot para cada banda, em uma figura única.
+    """
+    n = len(bands)
+    cols = 2
+    rows = (n + 1)//cols
+    fig, axes = plt.subplots(rows, cols, figsize=(cols*6, rows*4))
+    axes = axes.flatten()
+
+    for ax, band in zip(axes, bands):
+        for group, grp_df in df.groupby('group'):
+            grp_df = grp_df.sort_values('conc')
+            ax.plot(
+                grp_df['conc'],
+                grp_df[band],
+                marker='o',
+                linestyle='-',
+                label=group
+            )
+        ax.set_title(band)
+        ax.set_xlabel("CaCl$_2$ (mM)")
+        ax.set_ylabel("Area")
+        ax.legend(fontsize=8)
+    # remove eixos extras
+    for ax in axes[n:]:
+        fig.delaxes(ax)
+
+    plt.tight_layout()
+    if save and out_folder:
+        plt.savefig(f"{out_folder}/all_bands_comparison.png", dpi=300)
+    plt.show()

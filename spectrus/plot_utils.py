@@ -1,7 +1,10 @@
+import os
 import numpy as np
 import ramanspy as rp
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from matplotlib import cm
+from matplotlib.ticker import MultipleLocator, FixedLocator
 from spectrus.analysis import get_peaks
 
 
@@ -44,6 +47,19 @@ def set_font(font_path: str):
     })
 
 
+def addLegend(ax):
+
+    legend = ax.legend(
+        loc='best',
+        fancybox=False,
+        frameon=True,
+        framealpha=0.9,
+        fontsize=11,
+        markerscale=1.3)
+
+    legend.get_frame().set_facecolor('w')
+    legend.get_frame().set_edgecolor('whitesmoke')
+
 def config_figure(fig_title: str, size: tuple) -> plt.Axes:
 
     """
@@ -78,13 +94,13 @@ def config_figure(fig_title: str, size: tuple) -> plt.Axes:
     return ax
 
 
-def plot_spectrum(spectrum: rp.Spectrum,
-                  title: str = "Raman Spectrum",
-                  size: tuple = (4500, 2000),
-                  color: str = "crimson",
-                  linewidth: float = 1.5,
-                  highlight_peaks: bool = True,
-                  peak_prominence: float = 10):
+def plot_spectrum(
+        spectrum: rp.Spectrum,
+        title: str = "Raman Spectrum", size: tuple = (4500, 2000),
+        color: str = "crimson", linewidth: float = 1.5,
+        highlight_peaks: bool = True, peak_prominence: float = 10,
+        save=True, save_path="./figures/spectrum.png", filename = "",
+    ):
     """
     Plot a single Spectrum with optional peak highlighting.
 
@@ -131,17 +147,15 @@ def plot_spectrum(spectrum: rp.Spectrum,
                         color="red")
     
     plt.tight_layout()
-    plt.show()
+     
+    if save:
+        plt.savefig(save_path, dpi=300)
 
 
-def plot_stacked(spectra: list,
-                 labels: list = None,
-                 title: str = "Stacked Raman Spectra",
-                 size: tuple = (4500, 2000),
-                 linewidth: float = 1.5, transp: float = 0.75,
-                 offset_step: float = 1.,
-                 highlight_peaks: bool = True,
-                 peak_prominence: float = 10):
+def plot_stacked(spectra: list, labels: list = None, title: str = "Stacked Raman Spectra", colors: list = [],
+                 size: tuple = (4500, 2000), linewidth: float = 1., transp: float = 0.75, offset_step: float = 1,
+                 highlight_peaks: bool = True, peak_prominence: float = 0.05,
+                 save: bool = True, out_folder: str = "", filename: str = "",):
 
     """
     Plot stacked Raman spectra with vertical offset.
@@ -168,8 +182,11 @@ def plot_stacked(spectra: list,
 
     ax = config_figure(title, size)
 
-    ax.set_xlabel("Raman Shift (cm$^{-1}$)")
-    ax.set_ylabel("Intensity")
+    ax.set_xlabel("Raman Shift (cm$^{-1}$)"); ax.set_ylabel("Intensity"); ax.set_yticklabels([]); ax.set_yticks([])
+    start, stop, step = 300, 1800, 100
+    locs = np.arange(start, stop + step, step)
+    ax.xaxis.set_major_locator(FixedLocator(locs)); ax.xaxis.set_minor_locator(MultipleLocator(20))
+    ax.tick_params(which='major', length=6); ax.tick_params(which='minor', length=3)
 
     for i, spectrum in enumerate(spectra):
        
@@ -177,12 +194,18 @@ def plot_stacked(spectra: list,
         offset = i * offset_step * (np.max(y) - np.min(y))
         label = labels[i] if labels else f"Spectrum {i+1}"
 
-        ax.plot(x, y + offset, lw=linewidth, label=label, color=f"C{i}")
+        max_x, min_x = np.max(x), np.min(x)
+        ax.set_xlim(min_x, max_x)
+
+        ax.plot(x, y + offset, lw=linewidth, label=label, color=colors[i], alpha=transp, zorder=1)
 
         if highlight_peaks:
             peak_pos, peak_int = get_peaks(spectrum, prominence=peak_prominence)
 
-            ax.plot(peak_pos, peak_int + offset, "ro", markersize=4)
+            ax.plot(peak_pos, peak_int + offset, lw=0,
+                       marker='o', fillstyle='none', markersize=3, 
+                       color='#383838', alpha=0.85, mew=.75,
+                       zorder=2)
 
             for xp, yp in zip(peak_pos, peak_int):
                 ax.annotate(f"{xp:.0f}",
@@ -190,18 +213,25 @@ def plot_stacked(spectra: list,
                             xytext=(0, 5),
                             textcoords="offset points",
                             ha="center",
-                            fontsize=8,
-                            color="red")
-
-    ax.legend()
+                            fontsize=10,
+                            color="#383838")
+    addLegend(ax)
     plt.tight_layout()
-    plt.show()
+
+    if save:
+        os.makedirs(out_folder, exist_ok=True)
+        if filename is None:
+            safe = title.lower().replace(" ", "_")
+            filename = f"{safe}.png"
+        plt.savefig(os.path.join(out_folder, filename), dpi=300)
 
 
-def plot_area(areas_dict: dict,
-                title: str = "Band Area Comparison",
-                color: str = "deepskyblue",
-                size: tuple = (2000, 1500)):
+def plot_area(
+        areas_dict: dict,
+        title: str = "Band Area Comparison", size: tuple = (2000, 1500),
+        color: str = "deepskyblue",
+        save: bool = True, save_path='./figures/band_comparison.png'
+    ):
     
     """
     Plot a bar chart comparing band areas across samples.
@@ -223,8 +253,8 @@ def plot_area(areas_dict: dict,
 
     dpi = 300
     w, h = size[0] / dpi, size[1] / dpi
-
     fig, ax = plt.subplots(figsize=(w, h))
+    
     ax.bar(labels, values, color=color, edgecolor='black')
 
     ax.set_title(title, weight='bold', pad=12)
@@ -233,4 +263,5 @@ def plot_area(areas_dict: dict,
     ax.tick_params(direction='out', length=4, width=.75, pad=8)
 
     plt.tight_layout()
-    plt.show()
+    if save:
+        plt.savefig(save_path, dpi=300)
