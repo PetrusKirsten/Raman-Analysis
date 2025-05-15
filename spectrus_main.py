@@ -1,18 +1,15 @@
 import os
-from spectrus.io import load_spectrum
-from spectrus.plot_utils import set_font
-from spectrus.utils import combine_spectra
-from spectrus.preprocessing import preprocess_batch
-from spectrus.multivariate import compute_pca, plot_pca, plot_pca_scree, plot_pca_loadings, compute_kmeans, plot_clusters
-from spectrus.analysis import extract_band_areas, plot_band_by_formulation, plot_all_bands
-
-
-import os
-from collections import defaultdict
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
-from spectrus.plot_utils import plot_stacked, config_figure
+from spectrus.io import load_spectrum
+from spectrus.utils import combine_spectra
+from spectrus.preprocessing import preprocess_batch
+from spectrus.plot_utils import set_font, plot_stacked, config_figure
+from spectrus.multivariate import compute_pca, plot_pca, plot_pca_scree, plot_pca_loadings
+from spectrus.analysis import extract_band_areas, plot_band_by_formulation, plot_all_bands
+
 
 def run_pca(data_folder="./data"):
 
@@ -94,6 +91,7 @@ def run_pca(data_folder="./data"):
 
     else:
         print("⚠️ Dataset insuficiente para PCA (mínimo = 2 amostras).")
+
 
 def run_spectra(data_folder="./data",
                 save: bool = False,
@@ -195,25 +193,8 @@ def run_spectra(data_folder="./data",
         )
     plt.show()
 
-    # 6️⃣ Heatmap geral de todas as amostras
-    matrix = np.stack([sp.spectral_data for sp in spectra_final])
-    shifts = spectra_final[0].spectral_axis
-
-    ax = config_figure("Heatmap – Todos Espectros", (1200, 800))
-    cax = ax.imshow(
-        matrix, aspect='auto', origin='lower',
-        extent=[shifts[0], shifts[-1], 0, matrix.shape[0]],
-        cmap='viridis'
-    )
-    ax.set_xlabel("Raman Shift (cm$^{-1}$)")
-    ax.set_ylabel("Amostras")
-    # fig.colorbar(cax, ax=ax, label="Intensidade (a.u.)")
-    plt.tight_layout()
-    # if save:
-    #     fig.savefig(os.path.join(out_folder, "spectra_heatmap.png"), dpi=300)
-    plt.show()
-
     return spectra_final, labels_final
+
 
 def run_spectra_precursors(
     data_folder="./data",
@@ -242,6 +223,7 @@ def run_spectra_precursors(
     sample_info = []
     for group in os.listdir(data_folder):
         group_path = os.path.join(data_folder, group)
+
         if not os.path.isdir(group_path) or 'St' in group:
             continue
 
@@ -293,58 +275,21 @@ def run_spectra_precursors(
         by_group[grp].append((conc, sp))
 
     colors = {
-        "St": ['#E1C96B', '#FFE138', '#F1A836', '#E36E34'],
-        "St kC": ['hotpink', 'mediumvioletred', '#A251C3', '#773AD1'],
-        "St iC": ['lightskyblue', '#62BDC1', '#31A887', '#08653A'],
         "Carrageenans": ['lightskyblue', 'hotpink'],
-        "Powders": ['lightskyblue', '#62BDC1', '#31A887', '#08653A'],
+        "Precursors": ['mediumslateblue', 'orange', 'deeppink'],
     }
+
     for grp, lst in by_group.items():
         lst_sorted = sorted(lst, key=lambda x: x[0])
         concs, specs = zip(*lst_sorted)
-        labels = [f"{c} mM" for c in concs]
-        title = f"{grp}"
+        labels = [f"{c}" for c in concs]
+        title = f"{grp} (5 wt.% hydrogel)" if "Carrageenans" in grp else f"{grp}"
 
         plot_stacked(
-            spectra=list(specs), labels=labels, title=title, colors=colors[grp],
+            spectra=list(specs), labels=labels, title=title, colors=colors[grp], peak_prominence=.2,
             save=save, out_folder=out_folder, filename=f"spectra_{grp.replace(' ', '_')}.png"
         )
-    plt.show()
-    
-    # 5️⃣ Plot por concentração de Ca²⁺
-    by_conc = defaultdict(list)
-    for sp, (grp, conc) in zip(spectra_final, labels_final):
-        by_conc[conc].append((grp, sp))
 
-    for conc, lst in by_conc.items():
-        lst_sorted = sorted(lst, key=lambda x: x[0])
-        grps, specs = zip(*lst_sorted)
-        title = f"{int(float(conc))} mM CaCl$_2$"
-
-        colors_conc = [colors[grps[0]][1], colors[grps[1]][1], colors[grps[2]][1]]
-
-        plot_stacked(
-            spectra=list(specs), labels=list(grps), title=title, colors=colors_conc,
-            save=save, out_folder=out_folder, filename=f"spectra_{int(float(conc))}mM.png"
-        )
-    plt.show()
-
-    # 6️⃣ Heatmap geral de todas as amostras
-    matrix = np.stack([sp.spectral_data for sp in spectra_final])
-    shifts = spectra_final[0].spectral_axis
-
-    ax = config_figure("Heatmap – Todos Espectros", (1200, 800))
-    cax = ax.imshow(
-        matrix, aspect='auto', origin='lower',
-        extent=[shifts[0], shifts[-1], 0, matrix.shape[0]],
-        cmap='viridis'
-    )
-    ax.set_xlabel("Raman Shift (cm$^{-1}$)")
-    ax.set_ylabel("Amostras")
-    # fig.colorbar(cax, ax=ax, label="Intensidade (a.u.)")
-    plt.tight_layout()
-    # if save:
-    #     fig.savefig(os.path.join(out_folder, "spectra_heatmap.png"), dpi=300)
     plt.show()
 
     return spectra_final, labels_final
@@ -385,6 +330,7 @@ def run_bands(spectra, labels):
         out_folder="./figures/band_plots"
     )
 
+
 if __name__ == "__main__":
     font_path = (
         "C:/Users/petru/AppData/Local/Programs/Python/Python313/Lib/site-packages/matplotlib/mpl-data/fonts/ttf/"
@@ -393,5 +339,5 @@ if __name__ == "__main__":
     set_font(font_path)
 
     spec, lbls = run_spectra_precursors("./data", save=True, out_folder="./figures/spectra")
-    run_bands(spec, lbls)
+    # run_bands(spec, lbls)
     # run_pca()

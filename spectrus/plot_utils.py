@@ -58,7 +58,7 @@ def addLegend(ax):
         markerscale=1.3)
 
     legend.get_frame().set_facecolor('w')
-    legend.get_frame().set_edgecolor('whitesmoke')
+    legend.get_frame().set_edgecolor('w')
 
 def config_figure(fig_title: str, size: tuple) -> plt.Axes:
 
@@ -203,8 +203,8 @@ def plot_stacked(spectra: list, labels: list = None, title: str = "Stacked Raman
             peak_pos, peak_int = get_peaks(spectrum, prominence=peak_prominence)
 
             ax.plot(peak_pos, peak_int + offset, lw=0,
-                       marker='o', fillstyle='none', markersize=3, 
-                       color='#383838', alpha=0.85, mew=.75,
+                       marker='|', fillstyle='none', markersize=7, 
+                       color='dimgray', alpha=0.95, mew=1.,
                        zorder=2)
 
             for xp, yp in zip(peak_pos, peak_int):

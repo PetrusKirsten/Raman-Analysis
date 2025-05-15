@@ -36,7 +36,7 @@ def preprocess(spectrum: rp.Spectrum,
 
 
 def preprocess_batch(spectra_list,
-                     crop_range=(285, 1785),
+                     crop_range=(280, 1780),
                      smooth_window=7,
                      smooth_polyorder=2):
     """
