@@ -1,4 +1,6 @@
+import os
 import numpy as np
+import seaborn as sns
 
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
@@ -317,3 +319,77 @@ def plot_clusters(scores: np.ndarray,
      
     if save:
         plt.savefig(save_path, dpi=300)
+
+def plot_heatmap(df_metrics, bands, out_folder="./figs/bands", save=True):
+    """
+    Plota um heatmap das áreas de bandas (amostras x bandas).
+    """
+    os.makedirs(out_folder, exist_ok=True)
+    df_heatmap = df_metrics.copy()
+    df_heatmap['sample'] = df_heatmap['group'] + ' ' + df_heatmap['conc'].astype(str) + ' mM'
+    df_heatmap = df_heatmap.set_index('sample')
+    area_cols = [f'Area at {b} 1/cm' for b in bands]
+    matrix = df_heatmap[area_cols]
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(matrix, cmap="viridis", annot=False)
+    plt.title("Bands areas")
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(f"{out_folder}/heatmap_band_areas.png", dpi=300)
+
+def plot_pca_scores(df_metrics, bands, out_folder="./figs/bands", save=True):
+    """
+    Roda PCA sobre as áreas das bandas e plota PCA scores (PC1 x PC2).
+    """
+    os.makedirs(out_folder, exist_ok=True)
+    area_cols = [f'Area at {b} 1/cm' for b in bands]
+    X = df_metrics[area_cols].values
+    labels = df_metrics['group'] + ' ' + df_metrics['conc'].astype(str) + ' mM'
+    pca = PCA(n_components=2)
+    scores = pca.fit_transform(X)
+    explained = pca.explained_variance_ratio_ * 100
+
+    ax = config_figure("PCA Scores - Bands areas", (3*1200, 3*800))
+    for group in df_metrics['group'].unique():
+        idx = df_metrics['group'] == group
+        ax.scatter(scores[idx, 0], scores[idx, 1], label=group)
+    ax.axhline(0, color='gray', linestyle='--')
+    ax.axvline(0, color='gray', linestyle='--')
+    ax.set_xlabel(f"PC1 ({explained[0]:.1f}%)")
+    ax.set_ylabel(f"PC2 ({explained[1]:.1f}%)")
+    ax.legend()
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(f"{out_folder}/pca_scores_band_areas.png", dpi=300)
+    
+    pca = PCA(n_components=2)
+    X = df_metrics[[f'Area at {b} 1/cm' for b in bands]].values
+    pca.fit(X)
+
+    plot_pca_band_loadings(pca, bands, out_folder="./figures/bands", save=True)
+
+def plot_pca_band_loadings(pca_model, bands, out_folder="./figures/bands", save=True):
+    """
+    Plota os loadings do PCA das bandas (PC1, PC2, ...).
+    """
+    import os
+    os.makedirs(out_folder, exist_ok=True)
+
+    n_components = pca_model.components_.shape[0]
+    band_names = bands
+
+    for pc in range(n_components):
+        ax = config_figure(f"PCA Loadings - PC{pc+1}", (2*1000, 3*600))
+        ax.bar(band_names, pca_model.components_[pc], color='slategray', edgecolor='#383838', alpha=0.75, width=0.65)
+        ax.set_xlabel("Bands (cm$^{-1}$)")
+        ax.set_ylabel("Loading")
+        ax.set_title(f"Bands contribution to PC{pc+1}")
+        ax.axhline(0, color='gray', linestyle='--')
+        plt.tight_layout()
+
+        if save:
+            plt.savefig(f"{out_folder}/pca_band_loadings_PC{pc+1}.png", dpi=300)
+        # plt.show()

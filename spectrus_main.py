@@ -8,8 +8,9 @@ from spectrus.utils import combine_spectra
 from spectrus.preprocessing import preprocess_batch
 from spectrus.plot_utils import set_font, plot_stacked, config_figure
 from spectrus.multivariate import compute_pca, plot_pca, plot_pca_scree, plot_pca_loadings
+from spectrus.multivariate import plot_heatmap, plot_pca_scores
 from spectrus.analysis import extract_band_areas, plot_band_by_formulation, plot_all_bands
-from spectrus.analysis import extract_band_metrics, compute_ratio, plot_band_metric, plot_all_metrics
+from spectrus.analysis import extract_band_metrics, compute_ratio, plot_band_metric
 
 
 def run_pca(data_folder="./data"):
@@ -334,21 +335,61 @@ def run_bands_metric(spectra, labels):
 
     bands = {  
         # TODO: justify each band
-        "478":   (478 - 10,  478 + 10),
-        "851":   (851 - 5,   851 + 5),
-        "862":   (862 - 25,  862 + 15),
-        "939":   (939 - 15,  939 + 15),
-        "1080":  (1080 - 10, 1080 + 10),
-        "1650":  (1650 - 40, 1650 + 40),
+        #"478":   (478 - 10,  478 + 10),
+        #"851":   (851 - 5,   851 + 5),
+        #"862":   (862 - 25,  862 + 15),
+        #"939":   (939 - 15,  939 + 15),
+        "1080":  (1080 - 20, 1080 + 20),
+        #"1650":  (1650 - 40, 1650 + 40),
     }
 
     df_metrics = extract_band_metrics(spectra, labels, bands)
-    df_metrics = compute_ratio(df_metrics, "851", "939")
+    #df_metrics = compute_ratio(df_metrics, "851", "939")
 
     # plot_band_metric(df_metrics, "Area at 851 1/cm", "Area", out_folder="figures/bands", save=True)
     # plot_band_metric(df_metrics, "Area at 1650 1/cm", "Area", out_folder="figures/bands", save=True)
-    plot_band_metric(df_metrics, "ratio_851_to_939", "Area", out_folder="figures/bands", save=True)
+    for band in bands.keys():
+        plot_band_metric(df_metrics, f"Area at {band} 1/cm", "Area", out_folder="figures/bands", save=True)
+        plot_band_metric(df_metrics, f"Center at {band} 1/cm", "Area", out_folder="figures/bands", save=True)
+        # plot_band_metric(df_metrics, f"FWHM at {band} 1/cm", "Area", out_folder="figures/bands", save=True)
 
+def run_bands_analysis(spectra, labels):
+    # 1️⃣ Definir bandas
+    bands = {
+        "478":   (468, 488),
+        #"851":   (846, 856),
+        "862":   (847, 877),
+        "939":   (924, 954),
+        "1080":  (1070, 1090),
+        "1650":  (1610, 1690),
+    }
+
+    # 3️⃣ Extrair métricas
+    df_metrics = extract_band_metrics(spectra, labels, bands)
+
+    # 4️⃣ Calcular razões químicas
+    df_metrics = compute_ratio(df_metrics, "862", "478")
+    df_metrics = compute_ratio(df_metrics, "1650", "1080")
+
+    # 5️⃣ Exploração univariada
+    for band in bands:
+        plot_band_metric(df_metrics, f"Area at {band} 1/cm", f"Area", out_folder="./figures/bands", save=True)
+        plot_band_metric(df_metrics, f"Center at {band} 1/cm", f"Center", out_folder="./figures/bands", save=True)
+        plot_band_metric(df_metrics, f"FWHM at {band} 1/cm", f"FWHM", out_folder="./figures/bands", save=True)
+
+    # Razões
+    plot_band_metric(df_metrics, "ratio_862_to_478", "Ratio 862/478", out_folder="./figures/bands", save=True)
+    plot_band_metric(df_metrics, "ratio_1650_to_1080", "Ratio 1650/1080", out_folder="./figures/bands", save=True)
+
+    # Plot heatmap
+    plot_heatmap(df_metrics, list(bands.keys()), out_folder="./figures/bands", save=True)
+
+    # Plot PCA scores
+    plot_pca_scores(df_metrics, list(bands.keys()), out_folder="./figures/bands", save=True)
+
+    # 7️⃣ Exportar resultados
+    df_metrics.to_csv("./figures/bands/band_metrics.csv", index=False)
+    print("Análise completa! Resultados salvos em ./figures/bands/")
 
 if __name__ == "__main__":
     font_path = (
@@ -360,5 +401,6 @@ if __name__ == "__main__":
 
     spec, lbls = run_spectra("./data", save=True, out_folder="./figures/spectra")
     # spec, lbls = run_spectra_precursors("./data", save=True, out_folder="./figures/spectra")
-    run_bands_metric(spec, lbls)
+    #run_bands_metric(spec, lbls)
+    run_bands_analysis(spec, lbls)
     # run_pca()

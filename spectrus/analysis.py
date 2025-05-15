@@ -234,7 +234,7 @@ def plot_band_by_formulation(
 
     if save and out_folder:
         plt.savefig(f"{out_folder}/band_{band.replace(' ','_')}.png", dpi=300)
-    plt.show()
+    # # plt.show()
 
 
 def plot_all_bands(
@@ -273,7 +273,7 @@ def plot_all_bands(
     plt.tight_layout()
     if save and out_folder:
         plt.savefig(f"{out_folder}/all_bands_comparison.png", dpi=300)
-    plt.show()
+    # plt.show()
 
 
 def extract_band_metrics(
@@ -337,7 +337,7 @@ def extract_band_metrics(
             else:                
                 fwhm = np.nan
 
-            row[f'Center at {name} 1/cm'] = fwhm
+            row[f'FWHM at {name} 1/cm'] = fwhm
 
         rows.append(row)
 
@@ -399,7 +399,7 @@ def plot_band_metric(
     if save and out_folder:
         plt.savefig(f"{out_folder}/{safe_filename(metric)}.png", dpi=300)
     
-    plt.show()
+    # plt.show()
 
 def plot_all_metrics(
     df: pd.DataFrame,
@@ -447,4 +447,4 @@ def plot_all_metrics(
     if save and out_folder:
         plt.savefig(f"{out_folder}/all_band_metrics.png", dpi=300)
     
-    plt.show()
+    # plt.show()
