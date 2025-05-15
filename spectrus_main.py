@@ -332,7 +332,8 @@ def run_bands(spectra, labels):
 
 def run_bands_metric(spectra, labels):
 
-    bands = {
+    bands = {  
+        # TODO: justify each band
         "478":   (478 - 10,  478 + 10),
         "851":   (851 - 5,   851 + 5),
         "862":   (862 - 25,  862 + 15),
