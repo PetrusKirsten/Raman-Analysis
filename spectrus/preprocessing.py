@@ -36,7 +36,7 @@ def preprocess(spectrum: rp.Spectrum,
 
 
 def preprocess_batch(spectra_list,
-                     crop_range=(280, 1780),
+                     crop_range=(380, 1780),
                      smooth_window=7,
                      smooth_polyorder=2):
     """
@@ -58,7 +58,7 @@ def preprocess_batch(spectra_list,
         rp.preprocessing.despike.WhitakerHayes(kernel_size=8, threshold=15),
         rp.preprocessing.denoise.SavGol(window_length=smooth_window, polyorder=smooth_polyorder),
         rp.preprocessing.baseline.ASLS(),
-        rp.preprocessing.normalise.MinMax()
+        rp.preprocessing.normalise.MinMax(),
     ])
 
     return [routine.apply(spectrum) for spectrum in spectra_list]

@@ -9,6 +9,7 @@ from spectrus.preprocessing import preprocess_batch
 from spectrus.plot_utils import set_font, plot_stacked, config_figure
 from spectrus.multivariate import compute_pca, plot_pca, plot_pca_scree, plot_pca_loadings
 from spectrus.analysis import extract_band_areas, plot_band_by_formulation, plot_all_bands
+from spectrus.analysis import extract_band_metrics, compute_ratio, plot_band_metric, plot_all_metrics
 
 
 def run_pca(data_folder="./data"):
@@ -146,8 +147,7 @@ def run_spectra(data_folder="./data",
         key = (info["group"], info["conc"])
         buckets[key].append(sp)
 
-    spectra_final = []
-    labels_final  = []
+    spectra_final, labels_final = [], []
     for (grp, conc), reps in buckets.items():
         avg = combine_spectra(reps)
         spectra_final.append(avg)
@@ -173,7 +173,7 @@ def run_spectra(data_folder="./data",
             spectra=list(specs), labels=labels, title=title, colors=colors[grp],
             save=save, out_folder=out_folder, filename=f"spectra_{grp.replace(' ', '_')}.png"
         )
-    plt.show()
+    # plt.show()
     
     # 5️⃣ Plot por concentração de Ca²⁺
     by_conc = defaultdict(list)
@@ -185,13 +185,12 @@ def run_spectra(data_folder="./data",
         grps, specs = zip(*lst_sorted)
         title = f"{int(float(conc))} mM CaCl$_2$"
 
-        colors_conc = [colors[grps[0]][1], colors[grps[1]][1], colors[grps[2]][1]]
-
+        colors_conc = [colors[grps[0]][2], colors[grps[1]][1], colors[grps[2]][1]]
         plot_stacked(
             spectra=list(specs), labels=list(grps), title=title, colors=colors_conc,
             save=save, out_folder=out_folder, filename=f"spectra_{int(float(conc))}mM.png"
         )
-    plt.show()
+    # plt.show()
 
     return spectra_final, labels_final
 
@@ -331,13 +330,34 @@ def run_bands(spectra, labels):
     )
 
 
+def run_bands_metric(spectra, labels):
+
+    bands = {
+        "478":   (478 - 10,  478 + 10),
+        "851":   (851 - 5,   851 + 5),
+        "862":   (862 - 25,  862 + 15),
+        "939":   (939 - 15,  939 + 15),
+        "1080":  (1080 - 10, 1080 + 10),
+        "1650":  (1650 - 40, 1650 + 40),
+    }
+
+    df_metrics = extract_band_metrics(spectra, labels, bands)
+    df_metrics = compute_ratio(df_metrics, "851", "939")
+
+    # plot_band_metric(df_metrics, "Area at 851 1/cm", "Area", out_folder="figures/bands", save=True)
+    # plot_band_metric(df_metrics, "Area at 1650 1/cm", "Area", out_folder="figures/bands", save=True)
+    plot_band_metric(df_metrics, "ratio_851_to_939", "Area", out_folder="figures/bands", save=True)
+
+
 if __name__ == "__main__":
     font_path = (
-        "C:/Users/petru/AppData/Local/Programs/Python/Python313/Lib/site-packages/matplotlib/mpl-data/fonts/ttf/"
-                 "helvetica-light-587ebe5a59211.ttf"
-        )   
+        "C:/Users/petru/AppData/Local/Programs/"
+        "Python/Python313/Lib/site-packages/matplotlib/mpl-data/fonts/ttf/"
+        "helvetica-light-587ebe5a59211.ttf"
+    )   
     set_font(font_path)
 
-    spec, lbls = run_spectra_precursors("./data", save=True, out_folder="./figures/spectra")
-    # run_bands(spec, lbls)
+    spec, lbls = run_spectra("./data", save=True, out_folder="./figures/spectra")
+    # spec, lbls = run_spectra_precursors("./data", save=True, out_folder="./figures/spectra")
+    run_bands_metric(spec, lbls)
     # run_pca()

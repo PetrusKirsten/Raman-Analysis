@@ -55,7 +55,7 @@ def addLegend(ax):
         frameon=True,
         framealpha=0.9,
         fontsize=11,
-        markerscale=1.3)
+        markerscale=1.)
 
     legend.get_frame().set_facecolor('w')
     legend.get_frame().set_edgecolor('w')
