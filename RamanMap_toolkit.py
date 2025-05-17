@@ -440,10 +440,10 @@ def preprocess(maps: list,
     """
     routine = rp.preprocessing.Pipeline([
         rp.preprocessing.misc.Cropper(region=region),
-        rp.preprocessing.despike.WhitakerHayes(kernel_size=3, threshold=25),
-        rp.preprocessing.denoise.SavGol(window_length=win_len, polyorder=3),
+        rp.preprocessing.despike.WhitakerHayes(kernel_size=8, threshold=15),
+        rp.preprocessing.denoise.SavGol(window_length=7, polyorder=2),
         # Optionally add baseline correction, e.g., ASLS
-        # rp.preprocessing.baseline.ASLS(),
+        rp.preprocessing.baseline.ASLS(),
     ])
     return [routine.apply(m) for m in maps]
 
@@ -612,6 +612,7 @@ def plot_band_global_norm(image: rp.SpectralImage,
                           title: str = None,
                           figsize: tuple = (2500, 2500),
                           cmap: str = 'inferno',
+                          interp='nearest',
                           method: str = 'mean',
                           compensation: str = 'raw') -> None:
     """
@@ -635,15 +636,17 @@ def plot_band_global_norm(image: rp.SpectralImage,
     band_img = extract_band(image, center, width, method=method)
 
     if compensation == 'diff':
-        topo = sum_intensity(image, method=method)
-        diff = band_img - topo
-        mask = topo > np.percentile(topo, 5)
-        diff[~mask] = 0
-        band_img = gaussian_filter(diff, sigma=0.9)
+        diff = band_img - sum_intensity(image, method=method)  # topography
+        diff += np.abs(diff.min())
+        # mask = topo > np.percentile(topo, 3)
+        # diff[~mask] = 0
+        band_img = gaussian_filter(diff, sigma=.5)
+        band_img = diff
+        global_max = np.percentile(band_img[band_img > 0], 99.8)
 
-    band_img = np.clip(band_img, 0, global_max) / global_max
+    band_img = np.clip(gaussian_filter(band_img, sigma=.9), 0, global_max) / global_max
 
-    im = ax.imshow(band_img, cmap=cmap, origin='upper', interpolation='nearest')
+    im = ax.imshow(band_img, cmap=cmap, origin='upper', interpolation=interp)
     scale_ticks(ax)
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     config_bar(cbar)
@@ -681,10 +684,11 @@ def plot_multiband(image: rp.SpectralImage,
 
     chan = [extract_band(image, c, w, method=method) for c, w in bands]
 
-    if compensation == 'diff':
-        topo = sum_intensity(image, method=method)
-        chan = [normalize(np.clip(gaussian_filter(b - topo, sigma=0.9), -0.1, 0.1)) for b in chan]
-
+    # region
+    # if compensation == 'diff':
+    # topo = sum_intensity(image, method=method)
+    # chan = [normalize(np.clip(gaussian_filter(b - topo, sigma=0.9), -0.1, 0.1)) for b in chan]
+    # endregion
     if colors is None:
         default = [(1,0,0), (0,1,0), (0,0,1)]
         colors = default[:len(chan)]
@@ -699,7 +703,7 @@ def plot_multiband(image: rp.SpectralImage,
         rgb[...,2] += band_img * cb
 
     rgb = np.clip(rgb, 0, 1)
-    thresholds = (0.67, 0.67, 0.67)  # ajusta pra teus dados!
+    thresholds = (0.2, 0.2, 0.2)  # ajusta pra teus dados!
     rgba = apply_alpha_mask(rgb, thresholds)
 
     ax = config_figure(f"RGB Bands {bands}", figsize, face='#1d1e24', edge='white')

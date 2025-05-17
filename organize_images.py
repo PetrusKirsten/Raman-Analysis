@@ -34,18 +34,18 @@ def organize_images_by_pattern(folder_path, patterns):
 if __name__ == "__main__":
 
     # Define the folder containing the image files
-    st = "./figures/maps/St CLs/bands_40to1785_w-bg_nearest"
+    st = "./figures/maps/St CLs/bands_280to1780_no-bg_nearest"
 
-    kc = "./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
+    kc = "./figures/maps/St kC CLs/bands_280to1780_no-bg_nearest"
 
-    ic = "./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
+    ic = "./figures/maps/St iC CLs/bands_280to1780_no-bg_nearest"
 
-    car = "./figures/maps/Carrageenans/bands_40to1785_w-bg_nearest"
+    car = "./figures/maps/Carrageenans/bands_280to1780_no-bg_nearest"
 
     # Define the patterns to look for in file names
-    name_patterns = ["480", "550", "805", "850", "941", "1220"]
+    name_patterns = ["478", "862", "939", "1080", "1650"]
 
-    for folder in [car]:
+    for folder in [st, kc, ic, car]:
         organize_images_by_pattern(folder, name_patterns)
 
     logging.info("Image organization completed successfully.")

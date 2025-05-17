@@ -4,9 +4,11 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
 
-def montar_grid_topografia(
+def set_grid(
         title, image_paths, save_path,
-        crop_list: list, cols=4, rows=3, row_labels=["St CL", "St kCar CL", "St iCar CL"]):
+        crop_list: list, cols=4, rows=3, row_labels=["St CL", "St kCar CL", "St iCar CL"]
+    ):
+    
     # === Fonte ===
     font_path = (
         "C:/Users/petru/AppData/Local/Programs/Python/Python313/Lib/site-packages/matplotlib/"
@@ -14,7 +16,6 @@ def montar_grid_topografia(
     fm.fontManager.addfont(font_path)
     prop = fm.FontProperties(fname=font_path)
     font_name = prop.get_name()
-
     plt.rcParams.update({
         'font.family': font_name,
         'figure.facecolor': '#09141E',
@@ -22,12 +23,9 @@ def montar_grid_topografia(
         'savefig.dpi': 300,
     })
 
-
     # === Recorte ===
     crop_x, crop_y, crop_w, crop_h = crop_list[0], crop_list[1], crop_list[2], crop_list[3]
-
     col_labels = [f"CL {i * 7}" for i in range(cols)]
-
     cropped_images = []
     for path in image_paths:
         img = Image.open(path)
@@ -42,7 +40,6 @@ def montar_grid_topografia(
 
     img_w, img_h = cropped_images[0].size
     final_img = Image.new("RGB", (img_w * cols, img_h * rows))
-
     for idx, img in enumerate(cropped_images):
         row = idx // cols
         col = idx % cols
@@ -52,7 +49,6 @@ def montar_grid_topografia(
     fig, ax = plt.subplots(figsize=(cols * 3, rows * 3), constrained_layout=True)
     ax.imshow(final_img)
     ax.axis("off")
-
     ax.set_xlim(-100, final_img.width)
     ax.set_ylim(final_img.height, -100)
 
@@ -61,7 +57,6 @@ def montar_grid_topografia(
     for c in range(cols):
         ax.text((c + 0.5) * img_w, -30, col_labels[c], ha='center', va='bottom',
                 fontsize=12, color='w', fontproperties=prop)
-
     for r in range(rows):
         ax.text(-30, (r + 0.5) * img_h, row_labels[r], ha='right', va='center',
                 fontsize=12, color='w', fontproperties=prop, rotation=90)
@@ -70,7 +65,7 @@ def montar_grid_topografia(
     plt.savefig(save_path, bbox_inches='tight')
     # plt.show()
 
-
+# region
 # # === Topograhpy ===
 # type = 'topography'
 #
@@ -99,287 +94,169 @@ def montar_grid_topografia(
 #     title=f"Total spectrum sum | Topography map", image_paths=paths_topo, save_path=f"{type}_grid.png",
 #     crop_list=[0, 240, 2160, 2100]
 # )
-#
-# # === 480 cm-1 band ===
-# type = 'band_480_diff_global'
-# band = '480'
-#
-# st = f"./figures/maps/St CLs/bands_40to1785_w-bg_nearest"
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{st}/{band}/St_CL_0_Region_1_{type}.png",
-#         f"{st}/{band}/St_CL_7_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_14_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_21_Region_1_{type}.png",
-#
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_1_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000]
-# )
-#
-# # === 480 cm-1 band - raw ===
-# type = 'band_480_raw_global'
-# band = '480'
-#
-# st = f"./figures/maps/St CLs/bands_40to1785_w-bg_nearest"
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{st}/{band}/St_CL_0_Region_1_{type}.png",
-#         f"{st}/{band}/St_CL_7_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_14_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_21_Region_1_{type}.png",
-#
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_1_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000]
-# )
-#
-# # === 550 cm-1 band ===
-# band = '550'
-# type = f'band_{band}_diff_global'
-#
-# st = f"./figures/maps/St CLs/bands_40to1785_w-bg_nearest"
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{st}/{band}/St_CL_0_Region_1_{type}.png",
-#         f"{st}/{band}/St_CL_7_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_14_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_21_Region_2_{type}.png",
-#
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000]
-# )
-#
-# # === 550 cm-1 band - raw ===
-# band = '550'
-# type = f'band_{band}_raw_global'
-#
-# st = f"./figures/maps/St CLs/bands_40to1785_w-bg_nearest"
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{st}/{band}/St_CL_0_Region_1_{type}.png",
-#         f"{st}/{band}/St_CL_7_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_14_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_21_Region_2_{type}.png",
-#
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000]
-# )
-#
-# # === 941 cm-1 band ===
-# band = '941'
-# type = f'band_{band}_diff_global'
-#
-# st = f"./figures/maps/St CLs/bands_40to1785_w-bg_nearest"
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{st}/{band}/St_CL_0_Region_1_{type}.png",
-#         f"{st}/{band}/St_CL_7_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_14_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_21_Region_1_{type}.png",
-#
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000]
-# )
-#
-# # === 941 cm-1 band - raw ===
-# band = '941'
-# type = f'band_{band}_raw_global'
-#
-# st = f"./figures/maps/St CLs/bands_40to1785_w-bg_nearest"
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{st}/{band}/St_CL_0_Region_1_{type}.png",
-#         f"{st}/{band}/St_CL_7_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_14_Region_2_{type}.png",
-#         f"{st}/{band}/St_CL_21_Region_1_{type}.png",
-#
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000]
-# )
-#
-# # === 1220 cm-1 band ===
-# band = '1220'
-# type = f'band_{band}_diff_global'
-#
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000], rows=2, row_labels=["St kCar CL", "St iCar CL"]
-# )
-#
-# # === 1220 cm-1 band - raw ===
-# band = '1220'
-# type = f'band_{band}_raw_global'
-#
-# kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-#
-# paths_band = [
-#         f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",
-#
-#         f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-#         f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-#     crop_list=[0, 300, 2100, 2000], rows=2, row_labels=["St kCar CL", "St iCar CL"]
-# )
+# endregion
 
-# === 850 and 805 cm-1 band ===
-band = '850'
-type = f'band_{band}_diff_global'
+st = f"./figures/maps/St CLs/bands_280to1780_no-bg_nearest"
+kc = f"./figures/maps/St kC CLs/bands_280to1780_no-bg_nearest"
+ic = f"./figures/maps/St iC CLs/bands_280to1780_no-bg_nearest"
 
-kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-paths_band_kc = [
-        f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-        f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-        f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-        f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",]
+# === 478 cm-1 band - raw ===
+band = '478'
+type = f'band_{band}_raw_global'
 
-band = '805'
-type = f'band_{band}_diff_global'
+paths_band = [
+        f"{st}/{band}/St_CL_0_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_7_Region_{2}_{type}.png",
+        f"{st}/{band}/St_CL_14_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_21_Region_{2}_{type}.png",
 
-ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-paths_band_ic = [
-        f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-        f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-        f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-        f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",]
+        f"{kc}/{band}/St_kC_CL_0_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_7_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_14_Region_{2}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_21_Region_{1}_{type}.png",
 
-paths_band = paths_band_kc + paths_band_ic
+        f"{ic}/{band}/St_iC_CL_0_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_7_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_14_Region_{2}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_21_Region_{1}_{type}.png",
+]
 
-montar_grid_topografia(
-    title=f"Band map at 850 1/cm (for kCar) and 805 (for iCar) 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-    crop_list=[0, 300, 2100, 2000], rows=2, row_labels=["St kCar CL", "St iCar CL"]
+set_grid(
+    title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
+    crop_list=[0, 300, 2100, 2000]
 )
 
-# === 850 and 805 cm-1 band - raw ===
-band = '850'
+# === 862 cm-1 band - raw ===
+band = '862'
 type = f'band_{band}_raw_global'
 
-kc = f"./figures/maps/St kC CLs/bands_40to1785_w-bg_nearest"
-paths_band_kc = [
-        f"{kc}/{band}/St_kC_CL_0_Region_1_{type}.png",
-        f"{kc}/{band}/St_kC_CL_7_Region_1_{type}.png",
-        f"{kc}/{band}/St_kC_CL_14_Region_2_{type}.png",
-        f"{kc}/{band}/St_kC_CL_21_Region_2_{type}.png",]
+paths_band = [
+        f"{st}/{band}/St_CL_0_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_7_Region_{2}_{type}.png",
+        f"{st}/{band}/St_CL_14_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_21_Region_{2}_{type}.png",
 
-band = '805'
+        f"{kc}/{band}/St_kC_CL_0_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_7_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_14_Region_{2}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_21_Region_{1}_{type}.png",
+
+        f"{ic}/{band}/St_iC_CL_0_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_7_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_14_Region_{2}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_21_Region_{1}_{type}.png",
+]
+
+set_grid(
+    title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
+    crop_list=[0, 300, 2100, 2000]
+)
+
+# === 939 cm-1 band - raw ===
+band = '939'
 type = f'band_{band}_raw_global'
 
-ic = f"./figures/maps/St iC CLs/bands_40to1785_w-bg_nearest"
-paths_band_ic = [
-        f"{ic}/{band}/St_iC_CL_0_Region_1_{type}.png",
-        f"{ic}/{band}/St_iC_CL_7_Region_2_{type}.png",
-        f"{ic}/{band}/St_iC_CL_14_Region_1_{type}.png",
-        f"{ic}/{band}/St_iC_CL_21_Region_1_{type}.png",]
+paths_band = [
+        f"{st}/{band}/St_CL_0_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_7_Region_{2}_{type}.png",
+        f"{st}/{band}/St_CL_14_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_21_Region_{2}_{type}.png",
 
-paths_band = paths_band_kc + paths_band_ic
+        f"{kc}/{band}/St_kC_CL_0_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_7_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_14_Region_{2}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_21_Region_{1}_{type}.png",
 
-montar_grid_topografia(
-    title=f"Band map at 850 1/cm (for kCar) and 805 (for iCar) 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
-    crop_list=[0, 300, 2100, 2000], rows=2, row_labels=["St kCar CL", "St iCar CL"]
+        f"{ic}/{band}/St_iC_CL_0_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_7_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_14_Region_{2}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_21_Region_{1}_{type}.png",
+]
+
+set_grid(
+    title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
+    crop_list=[0, 300, 2100, 2000]
+)
+
+# === 1080 cm-1 band - raw ===
+band = '1080'
+type = f'band_{band}_raw_global'
+
+paths_band = [
+        f"{st}/{band}/St_CL_0_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_7_Region_{2}_{type}.png",
+        f"{st}/{band}/St_CL_14_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_21_Region_{2}_{type}.png",
+
+        f"{kc}/{band}/St_kC_CL_0_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_7_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_14_Region_{2}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_21_Region_{1}_{type}.png",
+
+        f"{ic}/{band}/St_iC_CL_0_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_7_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_14_Region_{2}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_21_Region_{1}_{type}.png",
+]
+
+set_grid(
+    title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
+    crop_list=[0, 300, 2100, 2000]
+)
+
+
+# === 1650 cm-1 band - raw ===
+band = '1650'
+type = f'band_{band}_raw_global'
+
+paths_band = [
+        f"{st}/{band}/St_CL_0_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_7_Region_{2}_{type}.png",
+        f"{st}/{band}/St_CL_14_Region_{1}_{type}.png",
+        f"{st}/{band}/St_CL_21_Region_{2}_{type}.png",
+
+        f"{kc}/{band}/St_kC_CL_0_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_7_Region_{1}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_14_Region_{2}_{type}.png",
+        f"{kc}/{band}/St_kC_CL_21_Region_{1}_{type}.png",
+
+        f"{ic}/{band}/St_iC_CL_0_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_7_Region_{1}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_14_Region_{2}_{type}.png",
+        f"{ic}/{band}/St_iC_CL_21_Region_{1}_{type}.png",
+]
+
+set_grid(
+    title=f"Band map at {band} 1/cm", image_paths=paths_band, save_path=f"{type}_grid.png",
+    crop_list=[0, 300, 2100, 2000]
+)
+
+# === multiband - raw ===
+st = f"./figures/maps/St CLs/multi_280to1780_no-bg_nearest"
+kc = f"./figures/maps/St kC CLs/multi_280to1780_no-bg_nearest"
+ic = f"./figures/maps/St iC CLs/multi_280to1780_no-bg_nearest"
+
+type = f'spectrum_raw'
+
+paths_band = [
+        f"{st}/St_CL_0_Region_{1}_{type}.png",
+        f"{st}/St_CL_7_Region_{2}_{type}.png",
+        f"{st}/St_CL_14_Region_{1}_{type}.png",
+        f"{st}/St_CL_21_Region_{2}_{type}.png",
+
+        f"{kc}/St_kC_CL_0_Region_{2}_{type}.png",
+        f"{kc}/St_kC_CL_7_Region_{1}_{type}.png",
+        f"{kc}/St_kC_CL_14_Region_{2}_{type}.png",
+        f"{kc}/St_kC_CL_21_Region_{1}_{type}.png",
+
+        f"{ic}/St_iC_CL_0_Region_{2}_{type}.png",
+        f"{ic}/St_iC_CL_7_Region_{1}_{type}.png",
+        f"{ic}/St_iC_CL_14_Region_{2}_{type}.png",
+        f"{ic}/St_iC_CL_21_Region_{3}_{type}.png",
+]
+
+set_grid(
+    title="Multiband maps | R: 862 cm$^{-1}$; G: 939 cm$^{-1}$; B: 1650 cm$^{-1}$;", 
+    image_paths=paths_band, save_path=f"{type}_grid.png",
+    crop_list=[0, 300, 2100, 2000]
 )
