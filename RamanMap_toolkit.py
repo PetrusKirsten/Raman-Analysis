@@ -653,8 +653,6 @@ def plot_band_global_norm(image: rp.SpectralImage,
     plt.tight_layout()
 
 
-
-
 # --------------------------------------
 # Visualization: Multiband RGB
 # --------------------------------------
@@ -706,8 +704,8 @@ def plot_multiband(image: rp.SpectralImage,
     thresholds = (0.2, 0.2, 0.2)  # ajusta pra teus dados!
     rgba = apply_alpha_mask(rgb, thresholds)
 
-    ax = config_figure(f"RGB Bands {bands}", figsize, face='#1d1e24', edge='white')
-    ax.imshow(rgba, origin='upper')
+    ax = config_figure(f"RGB Bands {bands}", figsize, face='#09141E', edge='white')
+    ax.imshow(rgba, origin='upper', interpolation='bilinear')
     scale_ticks(ax)
     plt.axis('off')
     plt.tight_layout()

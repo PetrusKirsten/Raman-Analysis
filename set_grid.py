@@ -65,36 +65,34 @@ def set_grid(
     plt.savefig(save_path, bbox_inches='tight')
     # plt.show()
 
-# region
-# # === Topograhpy ===
-# type = 'topography'
-#
-# st = f"./figures/maps/St CLs/local/topography_40to1785_w-bg_nearest"
-# kc = f"./figures/maps/St kC CLs/local/topography_40to1785_w-bg_nearest"
-# ic = f"./figures/maps/St iC CLs/local/topography_40to1785_w-bg_nearest"
-#
-# paths_topo = [
-#         f"{st}/St_CL_0_Region_1_{type}.png",
-#         f"{st}/St_CL_7_Region_2_{type}.png",
-#         f"{st}/St_CL_14_Region_2_{type}.png",
-#         f"{st}/St_CL_21_Region_1_{type}.png",
-#
-#         f"{kc}/St_kC_CL_0_Region_1_{type}.png",
-#         f"{kc}/St_kC_CL_7_Region_1_{type}.png",
-#         f"{kc}/St_kC_CL_14_Region_2_{type}.png",
-#         f"{kc}/St_kC_CL_21_Region_1_{type}.png",
-#
-#         f"{ic}/St_iC_CL_0_Region_1_{type}.png",
-#         f"{ic}/St_iC_CL_7_Region_2_{type}.png",
-#         f"{ic}/St_iC_CL_14_Region_1_{type}.png",
-#         f"{ic}/St_iC_CL_21_Region_3_{type}.png",
-# ]
-#
-# montar_grid_topografia(
-#     title=f"Total spectrum sum | Topography map", image_paths=paths_topo, save_path=f"{type}_grid.png",
-#     crop_list=[0, 240, 2160, 2100]
-# )
-# endregion
+# === Topograhpy ===
+type = 'topography'
+
+st = f"./figures/maps/St CLs/local/nearest/topography_40to1785_w-bg_nearest"
+kc = f"./figures/maps/St kC CLs/local/nearest/topography_40to1785_w-bg_nearest"
+ic = f"./figures/maps/St iC CLs/local/nearest/topography_40to1785_w-bg_nearest"
+
+paths_topo = [
+        f"{st}/St_CL_0_Region_{1}_{type}.png",
+        f"{st}/St_CL_7_Region_{2}_{type}.png",
+        f"{st}/St_CL_14_Region_{1}_{type}.png",
+        f"{st}/St_CL_21_Region_{2}_{type}.png",
+
+        f"{kc}/St_kC_CL_0_Region_{1}_{type}.png",
+        f"{kc}/St_kC_CL_7_Region_{1}_{type}.png",
+        f"{kc}/St_kC_CL_14_Region_{2}_{type}.png",
+        f"{kc}/St_kC_CL_21_Region_{1}_{type}.png",
+
+        f"{ic}/St_iC_CL_0_Region_{1}_{type}.png",
+        f"{ic}/St_iC_CL_7_Region_{1}_{type}.png",
+        f"{ic}/St_iC_CL_14_Region_{2}_{type}.png",
+        f"{ic}/St_iC_CL_21_Region_{1}_{type}.png",
+]
+
+set_grid(
+    title=f"Total spectrum sum | Topography map", image_paths=paths_topo, save_path=f"{type}_grid.png",
+    crop_list=[0, 240, 2160, 2100]
+)
 
 st = f"./figures/maps/St CLs/bands_280to1780_no-bg_nearest"
 kc = f"./figures/maps/St kC CLs/bands_280to1780_no-bg_nearest"

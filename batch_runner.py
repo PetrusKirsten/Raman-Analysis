@@ -437,8 +437,12 @@ if __name__ == "__main__":
     # Batch Parameters (adjust as needed)
 
     for name in ['St CLs', 'St kC CLs', 'St iC CLs', 'Carrageenans']:
-        for mode in ['bands', 'multi']:
-            for init_cut in [280]:
+        for mode in ['topography', 'multi']:
+            for init_cut in [40, 280]:
+                if mode == 'topography' and init_cut == 280:
+                    continue
+                if mode == 'multi' and init_cut == 40:
+                    continue
                 for filtering in ['nearest']:
 
                     SAMPLES_NAME   = name  # which folder/sample group iterate
